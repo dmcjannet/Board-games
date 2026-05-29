@@ -2,8 +2,9 @@ import { useState } from 'react';
 import RecordPlayForm from './components/RecordPlayForm';
 import RecentPlays from './components/RecentPlays';
 import Leaderboard from './components/Leaderboard';
+import Compare from './components/Compare';
 
-type Tab = 'record' | 'recent' | 'leaderboard';
+type Tab = 'record' | 'recent' | 'leaderboard' | 'compare';
 
 export default function App() {
   const [tab, setTab] = useState<Tab>('record');
@@ -35,6 +36,13 @@ export default function App() {
           >
             Leaderboard
           </button>
+          <button
+            type="button"
+            className={tab === 'compare' ? 'active' : ''}
+            onClick={() => setTab('compare')}
+          >
+            Compare
+          </button>
         </nav>
       </header>
 
@@ -49,6 +57,7 @@ export default function App() {
         )}
         {tab === 'recent' && <RecentPlays refreshKey={refreshKey} />}
         {tab === 'leaderboard' && <Leaderboard refreshKey={refreshKey} />}
+        {tab === 'compare' && <Compare refreshKey={refreshKey} />}
       </main>
     </div>
   );

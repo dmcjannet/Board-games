@@ -1,7 +1,8 @@
 # Board Game Score Tracker
 
-A small full-stack web app for tracking board game scores. Record a play of any
-game, enter each player's score, mark the winner(s), and review your recent plays.
+A small full-stack web app for tracking board game scores. Record plays, review
+recent results, see leaderboards across all your games, and compare players
+side-by-side with charts (win rate by game, score over time, head-to-head).
 
 ## Stack
 

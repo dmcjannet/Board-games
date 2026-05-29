@@ -9,7 +9,7 @@ export const playsRouter = Router();
 
 playsRouter.get('/', (req, res) => {
   const requested = Number(req.query.limit);
-  const limit = Math.min(Math.max(Number.isFinite(requested) ? requested : 20, 1), 100);
+  const limit = Math.min(Math.max(Number.isFinite(requested) ? requested : 20, 1), 1000);
   res.json(playsRepo.findRecent(limit));
 });
 
