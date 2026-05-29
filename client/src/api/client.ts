@@ -1,4 +1,4 @@
-import type { Game, Player, Play, CreatePlayPayload } from '../types';
+import type { Game, Player, Play, CreatePlayPayload, StatsResponse } from '../types';
 
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
   const res = await fetch(url, {
@@ -32,4 +32,6 @@ export const api = {
   getRecentPlays: (limit = 20) => request<Play[]>(`/api/plays?limit=${limit}`),
   createPlay: (payload: CreatePlayPayload) =>
     request<Play>('/api/plays', { method: 'POST', body: JSON.stringify(payload) }),
+
+  getStats: () => request<StatsResponse>('/api/stats'),
 };

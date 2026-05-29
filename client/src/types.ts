@@ -26,6 +26,28 @@ export interface Play {
   scores: PlayScore[];
 }
 
+export interface PlayerStats {
+  playerId: number;
+  playerName: string;
+  plays: number;
+  wins: number;
+  winRate: number;
+  averageScore: number;
+  highScore: number;
+}
+
+export interface GameLeaderboard {
+  gameId: number;
+  gameName: string;
+  totalPlays: number;
+  leaderboard: PlayerStats[];
+}
+
+export interface StatsResponse {
+  overall: PlayerStats[];
+  games: GameLeaderboard[];
+}
+
 export interface CreatePlayPayload {
   gameId: number;
   playedOn: string;

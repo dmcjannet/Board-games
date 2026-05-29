@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { gamesRouter } from './routes/games';
 import { playersRouter } from './routes/players';
 import { playsRouter } from './routes/plays';
+import { statsRouter } from './routes/stats';
 import { AppError } from './errors';
 
 export function createApp() {
@@ -16,6 +17,7 @@ export function createApp() {
   app.use('/api/games', gamesRouter);
   app.use('/api/players', playersRouter);
   app.use('/api/plays', playsRouter);
+  app.use('/api/stats', statsRouter);
 
   // Serve the built client (production) when it exists, same-origin.
   const clientDist = fileURLToPath(new URL('../../client/dist', import.meta.url));

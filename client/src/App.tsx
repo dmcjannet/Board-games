@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import RecordPlayForm from './components/RecordPlayForm';
 import RecentPlays from './components/RecentPlays';
+import Leaderboard from './components/Leaderboard';
 
-type Tab = 'record' | 'recent';
+type Tab = 'record' | 'recent' | 'leaderboard';
 
 export default function App() {
   const [tab, setTab] = useState<Tab>('record');
@@ -18,29 +19,36 @@ export default function App() {
             className={tab === 'record' ? 'active' : ''}
             onClick={() => setTab('record')}
           >
-            Record a Play
+            Record
           </button>
           <button
             type="button"
             className={tab === 'recent' ? 'active' : ''}
             onClick={() => setTab('recent')}
           >
-            Recent Plays
+            Recent
+          </button>
+          <button
+            type="button"
+            className={tab === 'leaderboard' ? 'active' : ''}
+            onClick={() => setTab('leaderboard')}
+          >
+            Leaderboard
           </button>
         </nav>
       </header>
 
       <main className="app-main">
-        {tab === 'record' ? (
+        {tab === 'record' && (
           <RecordPlayForm
             onSaved={() => {
               setRefreshKey((k) => k + 1);
               setTab('recent');
             }}
           />
-        ) : (
-          <RecentPlays refreshKey={refreshKey} />
         )}
+        {tab === 'recent' && <RecentPlays refreshKey={refreshKey} />}
+        {tab === 'leaderboard' && <Leaderboard refreshKey={refreshKey} />}
       </main>
     </div>
   );

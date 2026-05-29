@@ -297,3 +297,59 @@ ul.scores .score {
   color: var(--muted);
   font-style: italic;
 }
+
+/* Leaderboard */
+.leaderboard .card h2 {
+  margin: 0 0 0.75rem;
+}
+
+.table-scroll {
+  overflow-x: auto;
+}
+
+.stats-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.stats-table th,
+.stats-table td {
+  padding: 0.45rem 0.5rem;
+  text-align: right;
+  border-bottom: 1px solid var(--border);
+  font-variant-numeric: tabular-nums;
+}
+
+.stats-table th.rank,
+.stats-table td.rank {
+  text-align: center;
+  width: 32px;
+  color: var(--muted);
+}
+
+.stats-table th.rank + th,
+.stats-table td.player {
+  text-align: left;
+}
+
+.stats-table th {
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.stats-table tbody tr.leader {
+  background: rgba(245, 158, 11, 0.08);
+}
+
+.stats-table tbody tr.leader td.rank {
+  color: var(--winner);
+  font-weight: 700;
+}
+
+.stats-table tbody tr:last-child td {
+  border-bottom: none;
+}
