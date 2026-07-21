@@ -60,9 +60,19 @@ function computeH2H(plays: Play[], a: Player, b: Player): HeadToHead {
     const bScore = play.scores.find((s) => s.playerId === b.id);
     if (!aScore || !bScore) continue;
     sharedPlays += 1;
-    if (aScore.isWinner && bScore.isWinner) ties += 1;
-    else if (aScore.isWinner) aWins += 1;
-    else if (bScore.isWinner) bWins += 1;
+
+    // A play with multiple marked winners is a tie; it doesn't count as a
+    // win for anyone. Only a sole marked winner earns the win. A manual
+    // tiebreaker override that leaves one winner naturally lands here.
+    const winnerCount = play.scores.reduce((n, s) => n + (s.isWinner ? 1 : 0), 0);
+    if (winnerCount === 1) {
+      if (aScore.isWinner) aWins += 1;
+      else if (bScore.isWinner) bWins += 1;
+      // Otherwise a third player was the sole winner — not counted for either.
+    } else if (winnerCount >= 2 && aScore.isWinner && bScore.isWinner) {
+      // Only counts as a head-to-head tie if A and B are both in the tied group.
+      ties += 1;
+    }
   }
   return { playerA: a, playerB: b, aWins, bWins, ties, sharedPlays };
 }

@@ -42,6 +42,20 @@ interface GameSummaryRow {
   total_plays: number;
 }
 
+// CTE listing plays that have exactly one marked winner. Plays where multiple
+// players tied for the win are excluded — a tie doesn't count as a win for
+// anyone. A user-applied tiebreaker (unchecking the co-winners) leaves a
+// single winner, which lands the play back in this set naturally.
+const SOLO_WINNERS_CTE = `
+  WITH solo_winners AS (
+    SELECT play_id, MIN(player_id) AS winner_player_id
+    FROM play_scores
+    WHERE is_winner = 1
+    GROUP BY play_id
+    HAVING COUNT(*) = 1
+  )
+`;
+
 function rowToStats(row: PlayerStatsRow): PlayerStats {
   return {
     playerId: row.player_id,
@@ -54,7 +68,6 @@ function rowToStats(row: PlayerStatsRow): PlayerStats {
   };
 }
 
-// Restrict aggregate queries to plays whose player count matches `playerCount`.
 function playerCountClause(playerCount: number | null): { sql: string; args: number[] } {
   if (playerCount == null) return { sql: '', args: [] };
   return {
@@ -67,15 +80,17 @@ function getOverall(playerCount: number | null): PlayerStats[] {
   const { sql: filter, args } = playerCountClause(playerCount);
   const rows = db
     .prepare(
-      `SELECT
+      `${SOLO_WINNERS_CTE}
+       SELECT
          p.id AS player_id,
          p.name AS player_name,
          COUNT(DISTINCT ps.play_id) AS plays,
-         COALESCE(SUM(ps.is_winner), 0) AS wins,
+         COALESCE(SUM(CASE WHEN sw.winner_player_id = p.id THEN 1 ELSE 0 END), 0) AS wins,
          AVG(ps.score) AS average_score,
          MAX(ps.score) AS high_score
        FROM players p
        JOIN play_scores ps ON ps.player_id = p.id
+       LEFT JOIN solo_winners sw ON sw.play_id = ps.play_id
        WHERE 1=1 ${filter}
        GROUP BY p.id, p.name
        ORDER BY wins DESC, plays DESC, p.name COLLATE NOCASE`,
@@ -104,17 +119,19 @@ function getGameLeaderboards(playerCount: number | null): GameLeaderboard[] {
 
   const perPlayer = db
     .prepare(
-      `SELECT
+      `${SOLO_WINNERS_CTE}
+       SELECT
          pl.game_id,
          p.id AS player_id,
          p.name AS player_name,
          COUNT(DISTINCT ps.play_id) AS plays,
-         COALESCE(SUM(ps.is_winner), 0) AS wins,
+         COALESCE(SUM(CASE WHEN sw.winner_player_id = p.id THEN 1 ELSE 0 END), 0) AS wins,
          AVG(ps.score) AS average_score,
          MAX(ps.score) AS high_score
        FROM play_scores ps
        JOIN plays pl ON pl.id = ps.play_id
        JOIN players p ON p.id = ps.player_id
+       LEFT JOIN solo_winners sw ON sw.play_id = ps.play_id
        WHERE 1=1 ${filter}
        GROUP BY pl.game_id, p.id, p.name
        ORDER BY pl.game_id, wins DESC, plays DESC, p.name COLLATE NOCASE`,
@@ -139,7 +156,6 @@ function getGameLeaderboards(playerCount: number | null): GameLeaderboard[] {
   }));
 }
 
-// Distinct player counts across ALL plays (unfiltered) — drives the filter chips.
 function getAvailablePlayerCounts(): number[] {
   const rows = db
     .prepare('SELECT DISTINCT c FROM (SELECT COUNT(*) AS c FROM play_scores GROUP BY play_id) ORDER BY c')
