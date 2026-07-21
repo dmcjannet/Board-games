@@ -18,11 +18,24 @@ function isNumeric(value: string): boolean {
   return value.trim() !== '' && !Number.isNaN(Number(value));
 }
 
+function markHighestWinners(rows: ScoreRowState[]): ScoreRowState[] {
+  const scored = rows.filter((r) => isNumeric(r.score));
+  if (scored.length === 0) {
+    return rows.map((r) => ({ ...r, isWinner: false }));
+  }
+  const max = Math.max(...scored.map((r) => Number(r.score)));
+  return rows.map((r) => ({
+    ...r,
+    isWinner: isNumeric(r.score) && Number(r.score) === max,
+  }));
+}
+
 interface Props {
+  refreshKey: number;
   onSaved: () => void;
 }
 
-export default function RecordPlayForm({ onSaved }: Props) {
+export default function RecordPlayForm({ refreshKey, onSaved }: Props) {
   const [games, setGames] = useState<Game[]>([]);
   const [players, setPlayers] = useState<Player[]>([]);
   const [gameId, setGameId] = useState<number | null>(null);
@@ -32,43 +45,24 @@ export default function RecordPlayForm({ onSaved }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  async function loadGames() {
-    setGames(await api.getGames());
-  }
-  async function loadPlayers() {
-    setPlayers(await api.getPlayers());
-  }
-
   useEffect(() => {
-    void loadGames();
-    void loadPlayers();
-  }, []);
+    void api.getGames().then(setGames);
+    void api.getPlayers().then(setPlayers);
+  }, [refreshKey]);
 
   function updateRow(key: string, patch: Partial<ScoreRowState>) {
-    setRows((rs) => rs.map((r) => (r.key === key ? { ...r, ...patch } : r)));
+    setRows((rs) => {
+      const next = rs.map((r) => (r.key === key ? { ...r, ...patch } : r));
+      return 'score' in patch ? markHighestWinners(next) : next;
+    });
   }
+
   function removeRow(key: string) {
-    setRows((rs) => (rs.length > 1 ? rs.filter((r) => r.key !== key) : rs));
+    setRows((rs) => (rs.length > 1 ? markHighestWinners(rs.filter((r) => r.key !== key)) : rs));
   }
+
   function addRow() {
     setRows((rs) => [...rs, newRow()]);
-  }
-
-  function setWinnerByHighest() {
-    const scored = rows.filter((r) => isNumeric(r.score));
-    if (scored.length === 0) return;
-    const max = Math.max(...scored.map((r) => Number(r.score)));
-    setRows((rs) => rs.map((r) => ({ ...r, isWinner: isNumeric(r.score) && Number(r.score) === max })));
-  }
-
-  async function handleAddGame(name: string) {
-    const game = await api.createGame(name);
-    await loadGames();
-    setGameId(game.id);
-  }
-  async function handleAddPlayer(name: string) {
-    await api.createPlayer(name);
-    await loadPlayers();
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -118,11 +112,25 @@ export default function RecordPlayForm({ onSaved }: Props) {
     }
   }
 
+  const missingGames = games.length === 0;
+  const missingPlayers = players.length === 0;
+
   return (
     <form className="card" onSubmit={handleSubmit}>
       <h2>Record a Play</h2>
 
-      <GameSelect games={games} value={gameId} onChange={setGameId} onAddGame={handleAddGame} />
+      {(missingGames || missingPlayers) && (
+        <p className="hint">
+          {missingGames && missingPlayers
+            ? 'No games or players yet.'
+            : missingGames
+              ? 'No games yet.'
+              : 'No players yet.'}{' '}
+          Add them under <strong>Options → Add Player and/or Game</strong>.
+        </p>
+      )}
+
+      <GameSelect games={games} value={gameId} onChange={setGameId} />
 
       <div className="field">
         <label>Date played</label>
@@ -135,8 +143,6 @@ export default function RecordPlayForm({ onSaved }: Props) {
         onChange={updateRow}
         onRemove={removeRow}
         onAddRow={addRow}
-        onAddPlayer={handleAddPlayer}
-        onSetWinnerByHighest={setWinnerByHighest}
       />
 
       <div className="field">

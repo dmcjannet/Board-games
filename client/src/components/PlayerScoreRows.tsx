@@ -1,5 +1,4 @@
 import type { Player } from '../types';
-import QuickAddInline from './QuickAddInline';
 
 export interface ScoreRowState {
   key: string;
@@ -14,8 +13,6 @@ interface Props {
   onChange: (key: string, patch: Partial<ScoreRowState>) => void;
   onRemove: (key: string) => void;
   onAddRow: () => void;
-  onAddPlayer: (name: string) => Promise<void>;
-  onSetWinnerByHighest: () => void;
 }
 
 export default function PlayerScoreRows({
@@ -24,8 +21,6 @@ export default function PlayerScoreRows({
   onChange,
   onRemove,
   onAddRow,
-  onAddPlayer,
-  onSetWinnerByHighest,
 }: Props) {
   const usedIds = new Set(
     rows.map((r) => r.playerId).filter((id): id is number => id != null),
@@ -81,11 +76,10 @@ export default function PlayerScoreRows({
         <button type="button" onClick={onAddRow}>
           + Add player
         </button>
-        <button type="button" onClick={onSetWinnerByHighest}>
-          Set winner = highest score
-        </button>
       </div>
-      <QuickAddInline label="New player name" onAdd={onAddPlayer} />
+      <p className="muted small">
+        The highest score is marked winner automatically. Toggle the checkbox to override for tiebreakers.
+      </p>
     </div>
   );
 }

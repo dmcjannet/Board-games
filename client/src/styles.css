@@ -469,3 +469,62 @@ button.danger {
 button.danger:hover:not(:disabled) {
   background: rgba(248, 113, 113, 0.12);
 }
+
+/* Options subtabs */
+.subtabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-bottom: 1rem;
+  padding: 0.3rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.subtabs button {
+  flex: 1;
+  padding: 0.5rem 0.8rem;
+  background: transparent;
+  color: var(--muted);
+  border: none;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.subtabs button.active {
+  background: var(--primary);
+  color: #fff;
+}
+
+.entity-list {
+  list-style: none;
+  margin: 0 0 0.75rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.entity-list li {
+  padding: 0.45rem 0.7rem;
+  background: var(--surface-2);
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+.hint {
+  padding: 0.6rem 0.8rem;
+  background: rgba(99, 102, 241, 0.08);
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  color: var(--text);
+  margin: 0 0 1rem;
+}
+
+.muted.small {
+  font-size: 0.75rem;
+  margin: 0.5rem 0 0;
+}

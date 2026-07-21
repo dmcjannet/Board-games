@@ -3,7 +3,7 @@ import RecordPlayForm from './components/RecordPlayForm';
 import RecentPlays from './components/RecentPlays';
 import Leaderboard from './components/Leaderboard';
 import Compare from './components/Compare';
-import ManagePlays from './components/ManagePlays';
+import Options from './components/Options';
 
 type Tab = 'record' | 'recent' | 'leaderboard' | 'compare' | 'options';
 
@@ -57,18 +57,20 @@ export default function App() {
       </header>
 
       <main className="app-main">
-        {tab === 'record' && (
+        {/* Keep Record mounted so unsaved form state survives switching to Options. */}
+        <div style={{ display: tab === 'record' ? 'block' : 'none' }}>
           <RecordPlayForm
+            refreshKey={refreshKey}
             onSaved={() => {
               bumpRefresh();
               setTab('recent');
             }}
           />
-        )}
+        </div>
         {tab === 'recent' && <RecentPlays refreshKey={refreshKey} />}
         {tab === 'leaderboard' && <Leaderboard refreshKey={refreshKey} />}
         {tab === 'compare' && <Compare refreshKey={refreshKey} />}
-        {tab === 'options' && <ManagePlays refreshKey={refreshKey} onChanged={bumpRefresh} />}
+        {tab === 'options' && <Options refreshKey={refreshKey} onChanged={bumpRefresh} />}
       </main>
     </div>
   );

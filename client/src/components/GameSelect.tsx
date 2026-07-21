@@ -1,14 +1,12 @@
 import type { Game } from '../types';
-import QuickAddInline from './QuickAddInline';
 
 interface Props {
   games: Game[];
   value: number | null;
   onChange: (id: number) => void;
-  onAddGame: (name: string) => Promise<void>;
 }
 
-export default function GameSelect({ games, value, onChange, onAddGame }: Props) {
+export default function GameSelect({ games, value, onChange }: Props) {
   return (
     <div className="field">
       <label>Game</label>
@@ -22,7 +20,6 @@ export default function GameSelect({ games, value, onChange, onAddGame }: Props)
           </option>
         ))}
       </select>
-      <QuickAddInline label="New game name" onAdd={onAddGame} />
     </div>
   );
 }
