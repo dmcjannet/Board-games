@@ -15,6 +15,8 @@ import { api } from '../api/client';
 import type { Game, Player, Play, StatsResponse } from '../types';
 import PlayerCountFilter from './PlayerCountFilter';
 import TagFilter from './TagFilter';
+import { formatDate, formatDateShort } from '../utils/formatDate';
+import { usePlayerProfile } from '../context/PlayerProfileContext';
 
 const PLAYER_COLORS = [
   '#6366f1',
@@ -81,7 +83,7 @@ function computeH2H(plays: Play[], a: Player, b: Player): HeadToHead {
   return { playerA: a, playerB: b, aWins, bWins, ties, sharedPlays };
 }
 
-function H2HCard({ h2h }: { h2h: HeadToHead }) {
+function H2HCard({ h2h, onPlayerClick }: { h2h: HeadToHead; onPlayerClick: (id: number) => void }) {
   const { playerA, playerB, aWins, bWins, ties, sharedPlays } = h2h;
   return (
     <div className="card h2h">
@@ -100,14 +102,18 @@ function H2HCard({ h2h }: { h2h: HeadToHead }) {
               <span className="h2h-wins" style={{ color: colorFor(0) }}>
                 {aWins}
               </span>
-              <span>{playerA.name}</span>
+              <button type="button" className="player-link" onClick={() => onPlayerClick(playerA.id)}>
+                {playerA.name}
+              </button>
             </div>
             <div className="h2h-vs">vs</div>
             <div className="h2h-side">
               <span className="h2h-wins" style={{ color: colorFor(1) }}>
                 {bWins}
               </span>
-              <span>{playerB.name}</span>
+              <button type="button" className="player-link" onClick={() => onPlayerClick(playerB.id)}>
+                {playerB.name}
+              </button>
             </div>
           </div>
           {ties > 0 && (
@@ -121,7 +127,7 @@ function H2HCard({ h2h }: { h2h: HeadToHead }) {
   );
 }
 
-function PlayDetailList({ plays }: { plays: Play[] }) {
+function PlayDetailList({ plays, onPlayerClick }: { plays: Play[]; onPlayerClick: (id: number) => void }) {
   if (plays.length === 0) {
     return <p className="muted">No matching plays.</p>;
   }
@@ -135,7 +141,7 @@ function PlayDetailList({ plays }: { plays: Play[] }) {
             <div className="play-summary-row">
               <div className="play-summary" style={{ cursor: 'default' }}>
                 <div className="summary-top">
-                  <span className="col-date">{play.playedOn}</span>
+                  <span className="col-date">{formatDate(play.playedOn)}</span>
                   <span className="col-game">{play.game.name}</span>
                 </div>
               </div>
@@ -145,7 +151,13 @@ function PlayDetailList({ plays }: { plays: Play[] }) {
                 {scores.map((s) => (
                   <li key={s.playerId} className={s.isWinner ? 'winner' : ''}>
                     <span className="player">
-                      {s.playerName}
+                      <button
+                        type="button"
+                        className="player-link"
+                        onClick={() => onPlayerClick(s.playerId)}
+                      >
+                        {s.playerName}
+                      </button>
                       {s.isWinner && <span className="badge">Winner</span>}
                     </span>
                     <span className="score">{s.score}</span>
@@ -164,9 +176,11 @@ function PlayDetailList({ plays }: { plays: Play[] }) {
 function DrillDownModal({
   drillDown,
   onClose,
+  onPlayerClick,
 }: {
   drillDown: DrillDown;
   onClose: () => void;
+  onPlayerClick: (id: number) => void;
 }) {
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -189,7 +203,7 @@ function DrillDownModal({
           </button>
         </div>
         <div className="modal-body">
-          <PlayDetailList plays={drillDown.plays} />
+          <PlayDetailList plays={drillDown.plays} onPlayerClick={onPlayerClick} />
         </div>
       </div>
     </div>
@@ -208,6 +222,7 @@ export default function Compare({ refreshKey }: Props) {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [drillDown, setDrillDown] = useState<DrillDown | null>(null);
   const lastClickRef = useRef<{ key: string; time: number } | null>(null);
+  const { open: openProfile } = usePlayerProfile();
 
   useEffect(() => {
     let active = true;
@@ -342,7 +357,7 @@ export default function Compare({ refreshKey }: Props) {
     if (matches.length === 0) return;
     const gameName = matches[0]!.game.name;
     setDrillDown({
-      title: `${gameName} — ${date}`,
+      title: `${gameName} — ${formatDate(date)}`,
       subtitle: matches.length > 1 ? `${matches.length} plays on this date` : undefined,
       plays: matches,
     });
@@ -412,7 +427,7 @@ export default function Compare({ refreshKey }: Props) {
         <p className="muted">Select at least one player to compare.</p>
       ) : (
         <>
-          {h2h && <H2HCard h2h={h2h} />}
+          {h2h && <H2HCard h2h={h2h} onPlayerClick={openProfile} />}
 
           <div className="card">
             <h2>Win Rate by Game{playerCountFilter != null ? ` (${playerCountFilter}-player)` : ''}</h2>
@@ -491,9 +506,17 @@ export default function Compare({ refreshKey }: Props) {
                       onClick={handleLineChartClick}
                     >
                       <CartesianGrid stroke="#334155" strokeDasharray="3 3" />
-                      <XAxis dataKey="date" stroke="#94a3b8" tick={{ fontSize: 11 }} />
+                      <XAxis
+                      dataKey="date"
+                      stroke="#94a3b8"
+                      tick={{ fontSize: 11 }}
+                      tickFormatter={(v: string) => formatDateShort(v)}
+                    />
                       <YAxis stroke="#94a3b8" tick={{ fontSize: 12 }} />
-                      <Tooltip contentStyle={TOOLTIP_STYLE} />
+                      <Tooltip
+                      contentStyle={TOOLTIP_STYLE}
+                      labelFormatter={(v) => (typeof v === 'string' ? formatDate(v) : String(v))}
+                    />
                       <Legend wrapperStyle={{ fontSize: 13 }} />
                       {selectedPlayers.map((p, i) => (
                         <Line
@@ -516,7 +539,13 @@ export default function Compare({ refreshKey }: Props) {
         </>
       )}
 
-      {drillDown && <DrillDownModal drillDown={drillDown} onClose={() => setDrillDown(null)} />}
+      {drillDown && (
+        <DrillDownModal
+          drillDown={drillDown}
+          onClose={() => setDrillDown(null)}
+          onPlayerClick={openProfile}
+        />
+      )}
     </div>
   );
 }

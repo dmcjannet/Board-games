@@ -92,4 +92,19 @@ function deleteById(id: number): boolean {
   return info.changes > 0;
 }
 
-export const playsRepo = { create, findById, findRecent, deleteById };
+function update(id: number, input: CreatePlayInput): Play {
+  db.transaction(() => {
+    db.prepare('UPDATE plays SET game_id = ?, played_on = ?, notes = ? WHERE id = ?')
+      .run(input.gameId, input.playedOn, input.notes, id);
+    db.prepare('DELETE FROM play_scores WHERE play_id = ?').run(id);
+    const insertScore = db.prepare(
+      'INSERT INTO play_scores (play_id, player_id, score, is_winner) VALUES (?, ?, ?, ?)',
+    );
+    for (const s of input.scores) {
+      insertScore.run(id, s.playerId, s.score, s.isWinner ? 1 : 0);
+    }
+  })();
+  return findById(id)!;
+}
+
+export const playsRepo = { create, findById, findRecent, deleteById, update };

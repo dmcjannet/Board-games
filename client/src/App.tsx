@@ -4,10 +4,12 @@ import RecentPlays from './components/RecentPlays';
 import Leaderboard from './components/Leaderboard';
 import Compare from './components/Compare';
 import Options from './components/Options';
+import { SnackbarProvider } from './context/SnackbarContext';
+import { PlayerProfileProvider } from './context/PlayerProfileContext';
 
 type Tab = 'record' | 'recent' | 'leaderboard' | 'compare' | 'options';
 
-export default function App() {
+function AppShell() {
   const [tab, setTab] = useState<Tab>('record');
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -18,46 +20,25 @@ export default function App() {
       <header className="app-header">
         <h1>Board Game Score Tracker</h1>
         <nav className="tabs">
-          <button
-            type="button"
-            className={tab === 'record' ? 'active' : ''}
-            onClick={() => setTab('record')}
-          >
+          <button type="button" className={tab === 'record' ? 'active' : ''} onClick={() => setTab('record')}>
             Record
           </button>
-          <button
-            type="button"
-            className={tab === 'recent' ? 'active' : ''}
-            onClick={() => setTab('recent')}
-          >
+          <button type="button" className={tab === 'recent' ? 'active' : ''} onClick={() => setTab('recent')}>
             Recent
           </button>
-          <button
-            type="button"
-            className={tab === 'leaderboard' ? 'active' : ''}
-            onClick={() => setTab('leaderboard')}
-          >
+          <button type="button" className={tab === 'leaderboard' ? 'active' : ''} onClick={() => setTab('leaderboard')}>
             Leaderboard
           </button>
-          <button
-            type="button"
-            className={tab === 'compare' ? 'active' : ''}
-            onClick={() => setTab('compare')}
-          >
+          <button type="button" className={tab === 'compare' ? 'active' : ''} onClick={() => setTab('compare')}>
             Compare
           </button>
-          <button
-            type="button"
-            className={tab === 'options' ? 'active' : ''}
-            onClick={() => setTab('options')}
-          >
+          <button type="button" className={tab === 'options' ? 'active' : ''} onClick={() => setTab('options')}>
             Options
           </button>
         </nav>
       </header>
 
       <main className="app-main">
-        {/* Keep Record mounted so unsaved form state survives switching to Options. */}
         <div style={{ display: tab === 'record' ? 'block' : 'none' }}>
           <RecordPlayForm
             refreshKey={refreshKey}
@@ -73,5 +54,15 @@ export default function App() {
         {tab === 'options' && <Options refreshKey={refreshKey} onChanged={bumpRefresh} />}
       </main>
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <SnackbarProvider>
+      <PlayerProfileProvider>
+        <AppShell />
+      </PlayerProfileProvider>
+    </SnackbarProvider>
   );
 }

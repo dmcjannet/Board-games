@@ -28,4 +28,14 @@ function create(name: string): Player {
   return findById(Number(info.lastInsertRowid))!;
 }
 
-export const playersRepo = { findAll, findById, create };
+function rename(id: number, name: string): Player | undefined {
+  db.prepare('UPDATE players SET name = ? WHERE id = ?').run(name, id);
+  return findById(id);
+}
+
+function deleteById(id: number): boolean {
+  const info = db.prepare('DELETE FROM players WHERE id = ?').run(id);
+  return info.changes > 0;
+}
+
+export const playersRepo = { findAll, findById, create, rename, deleteById };

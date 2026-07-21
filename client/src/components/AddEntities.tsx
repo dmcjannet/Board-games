@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, type KeyboardEvent } from 'react';
 import { api } from '../api/client';
 import type { Game, Player } from '../types';
 import QuickAddInline from './QuickAddInline';
+import { useSnackbar } from '../context/SnackbarContext';
 
 interface Props {
   refreshKey: number;
@@ -91,11 +92,112 @@ function GameTagEditor({
   );
 }
 
+interface RenameRowProps<T extends { id: number; name: string }> {
+  entity: T;
+  onRename: (id: number, name: string) => Promise<void>;
+  onDelete: (id: number) => Promise<void>;
+  children?: React.ReactNode;
+}
+
+function RenameRow<T extends { id: number; name: string }>({
+  entity,
+  onRename,
+  onDelete,
+  children,
+}: RenameRowProps<T>) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(entity.name);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  function startEdit() {
+    setDraft(entity.name);
+    setError(null);
+    setEditing(true);
+  }
+
+  async function commit() {
+    const trimmed = draft.trim();
+    if (!trimmed || trimmed === entity.name) {
+      setEditing(false);
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      await onRename(entity.id, trimmed);
+      setEditing(false);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to rename');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleDelete() {
+    setBusy(true);
+    setError(null);
+    try {
+      await onDelete(entity.id);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to delete');
+      setBusy(false);
+    }
+  }
+
+  return (
+    <>
+      <div className="entity-row-main">
+        {editing ? (
+          <>
+            <input
+              type="text"
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  void commit();
+                }
+                if (e.key === 'Escape') setEditing(false);
+              }}
+              autoFocus
+              disabled={busy}
+              className="rename-input"
+            />
+            <button type="button" className="ghost small" onClick={() => void commit()} disabled={busy}>
+              Save
+            </button>
+            <button type="button" className="ghost small" onClick={() => setEditing(false)} disabled={busy}>
+              Cancel
+            </button>
+          </>
+        ) : (
+          <>
+            <span className="entity-name">{entity.name}</span>
+            {children}
+            <div className="entity-actions">
+              <button type="button" className="ghost small" onClick={startEdit} disabled={busy}>
+                Rename
+              </button>
+              <button type="button" className="danger small" onClick={() => void handleDelete()} disabled={busy}>
+                Delete
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+      {error && <p className="error inline row-error">{error}</p>}
+    </>
+  );
+}
+
 export default function AddEntities({ refreshKey, onChanged }: Props) {
   const [games, setGames] = useState<Game[]>([]);
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { show: showSnackbar } = useSnackbar();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -120,17 +222,37 @@ export default function AddEntities({ refreshKey, onChanged }: Props) {
     await load();
     onChanged();
   }
-
   async function handleAddPlayer(name: string) {
     await api.createPlayer(name);
     await load();
     onChanged();
   }
-
   async function updateGameTags(game: Game, nextTags: string[]) {
     await api.setGameTags(game.id, nextTags);
     await load();
     onChanged();
+  }
+  async function renameGame(id: number, name: string) {
+    await api.renameGame(id, name);
+    await load();
+    onChanged();
+  }
+  async function deleteGame(id: number) {
+    await api.deleteGame(id);
+    await load();
+    onChanged();
+    showSnackbar('Game deleted');
+  }
+  async function renamePlayer(id: number, name: string) {
+    await api.renamePlayer(id, name);
+    await load();
+    onChanged();
+  }
+  async function deletePlayer(id: number) {
+    await api.deletePlayer(id);
+    await load();
+    onChanged();
+    showSnackbar('Player deleted');
   }
 
   if (loading) return <p className="muted">Loading…</p>;
@@ -146,11 +268,8 @@ export default function AddEntities({ refreshKey, onChanged }: Props) {
           <ul className="entity-list game-list">
             {games.map((g) => (
               <li key={g.id} className="game-row">
-                <span className="entity-name">{g.name}</span>
-                <GameTagEditor
-                  game={g}
-                  onUpdate={(nextTags) => updateGameTags(g, nextTags)}
-                />
+                <RenameRow entity={g} onRename={renameGame} onDelete={deleteGame} />
+                <GameTagEditor game={g} onUpdate={(nextTags) => updateGameTags(g, nextTags)} />
               </li>
             ))}
           </ul>
@@ -158,7 +277,8 @@ export default function AddEntities({ refreshKey, onChanged }: Props) {
         <QuickAddInline label="New game name" onAdd={handleAddGame} />
         <p className="muted small">
           Tag games with anything useful — style, duration, player count — then filter the
-          Leaderboard and Compare tabs by those tags.
+          Leaderboard and Compare tabs by those tags. Deleting a game is refused if it has
+          recorded plays.
         </p>
       </div>
 
@@ -169,11 +289,16 @@ export default function AddEntities({ refreshKey, onChanged }: Props) {
         ) : (
           <ul className="entity-list">
             {players.map((p) => (
-              <li key={p.id}>{p.name}</li>
+              <li key={p.id} className="game-row">
+                <RenameRow entity={p} onRename={renamePlayer} onDelete={deletePlayer} />
+              </li>
             ))}
           </ul>
         )}
         <QuickAddInline label="New player name" onAdd={handleAddPlayer} />
+        <p className="muted small">
+          Deleting a player is refused if they have recorded plays.
+        </p>
       </div>
     </div>
   );

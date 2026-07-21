@@ -3,6 +3,8 @@ import { api } from '../api/client';
 import type { Player, PlayerStats, StatsResponse } from '../types';
 import PlayerCountFilter from './PlayerCountFilter';
 import TagFilter from './TagFilter';
+import Highlights from './Highlights';
+import { usePlayerProfile } from '../context/PlayerProfileContext';
 
 interface Props {
   refreshKey: number;
@@ -16,7 +18,7 @@ function formatAvg(value: number): string {
   return Number.isFinite(value) ? value.toFixed(1) : '—';
 }
 
-function StatsTable({ rows }: { rows: PlayerStats[] }) {
+function StatsTable({ rows, onPlayerClick }: { rows: PlayerStats[]; onPlayerClick: (id: number) => void }) {
   if (rows.length === 0) {
     return <p className="muted">No matching plays.</p>;
   }
@@ -38,7 +40,11 @@ function StatsTable({ rows }: { rows: PlayerStats[] }) {
           {rows.map((r, i) => (
             <tr key={r.playerId} className={i === 0 ? 'leader' : ''}>
               <td className="rank">{i + 1}</td>
-              <td className="player">{r.playerName}</td>
+              <td className="player">
+                <button type="button" className="player-link" onClick={() => onPlayerClick(r.playerId)}>
+                  {r.playerName}
+                </button>
+              </td>
               <td>{r.plays}</td>
               <td>{r.wins}</td>
               <td>{formatPct(r.winRate)}</td>
@@ -59,6 +65,7 @@ export default function Leaderboard({ refreshKey }: Props) {
   const [playerCountFilter, setPlayerCountFilter] = useState<number | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const { open: openProfile } = usePlayerProfile();
 
   useEffect(() => {
     let active = true;
@@ -119,6 +126,8 @@ export default function Leaderboard({ refreshKey }: Props) {
 
   return (
     <div className="leaderboard">
+      <Highlights refreshKey={refreshKey} />
+
       <PlayerCountFilter
         value={playerCountFilter}
         onChange={setPlayerCountFilter}
@@ -167,7 +176,7 @@ export default function Leaderboard({ refreshKey }: Props) {
               {overallTitle}
               {suffix}
             </h2>
-            <StatsTable rows={stats.overall} />
+            <StatsTable rows={stats.overall} onPlayerClick={openProfile} />
           </div>
           {stats.games.map((g) => (
             <div className="card" key={g.gameId}>
@@ -177,7 +186,7 @@ export default function Leaderboard({ refreshKey }: Props) {
                   {g.totalPlays} {g.totalPlays === 1 ? 'play' : 'plays'}
                 </span>
               </div>
-              <StatsTable rows={g.leaderboard} />
+              <StatsTable rows={g.leaderboard} onPlayerClick={openProfile} />
             </div>
           ))}
         </>

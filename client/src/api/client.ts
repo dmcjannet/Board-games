@@ -27,14 +27,22 @@ export const api = {
   getGames: () => request<Game[]>('/api/games'),
   createGame: (name: string) =>
     request<Game>('/api/games', { method: 'POST', body: JSON.stringify({ name }) }),
+  renameGame: (id: number, name: string) =>
+    request<Game>(`/api/games/${id}`, { method: 'PATCH', body: JSON.stringify({ name }) }),
+  deleteGame: (id: number) => request<void>(`/api/games/${id}`, { method: 'DELETE' }),
 
   getPlayers: () => request<Player[]>('/api/players'),
   createPlayer: (name: string) =>
     request<Player>('/api/players', { method: 'POST', body: JSON.stringify({ name }) }),
+  renamePlayer: (id: number, name: string) =>
+    request<Player>(`/api/players/${id}`, { method: 'PATCH', body: JSON.stringify({ name }) }),
+  deletePlayer: (id: number) => request<void>(`/api/players/${id}`, { method: 'DELETE' }),
 
   getRecentPlays: (limit = 20) => request<Play[]>(`/api/plays?limit=${limit}`),
   createPlay: (payload: CreatePlayPayload) =>
     request<Play>('/api/plays', { method: 'POST', body: JSON.stringify(payload) }),
+  updatePlay: (id: number, payload: CreatePlayPayload) =>
+    request<Play>(`/api/plays/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
   deletePlay: (id: number) => request<void>(`/api/plays/${id}`, { method: 'DELETE' }),
 
   getStats: (playerCount?: number | null, playerIds?: number[], tags?: string[]) => {

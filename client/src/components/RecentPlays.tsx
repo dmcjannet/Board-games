@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api/client';
 import type { Play } from '../types';
+import { formatDate } from '../utils/formatDate';
+import { usePlayerProfile } from '../context/PlayerProfileContext';
 
 interface Props {
   refreshKey: number;
@@ -10,6 +12,7 @@ export default function RecentPlays({ refreshKey }: Props) {
   const [plays, setPlays] = useState<Play[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { open: openProfile } = usePlayerProfile();
 
   useEffect(() => {
     let active = true;
@@ -47,13 +50,19 @@ export default function RecentPlays({ refreshKey }: Props) {
           <div className="card play-card" key={play.id}>
             <div className="play-header">
               <h3>{play.game.name}</h3>
-              <span className="date">{play.playedOn}</span>
+              <span className="date">{formatDate(play.playedOn)}</span>
             </div>
             <ul className="scores">
               {sorted.map((s) => (
                 <li key={s.playerId} className={s.isWinner ? 'winner' : ''}>
                   <span className="player">
-                    {s.playerName}
+                    <button
+                      type="button"
+                      className="player-link"
+                      onClick={() => openProfile(s.playerId)}
+                    >
+                      {s.playerName}
+                    </button>
                     {s.isWinner && <span className="badge">Winner</span>}
                   </span>
                   <span className="score">{s.score}</span>

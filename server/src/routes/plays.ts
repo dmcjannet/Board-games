@@ -33,13 +33,12 @@ playsRouter.delete('/:id', (req, res) => {
   res.status(204).send();
 });
 
-playsRouter.post('/', (req, res) => {
-  const parsed = createPlaySchema.safeParse(req.body);
+function validateAndBuildInput(body: unknown) {
+  const parsed = createPlaySchema.safeParse(body);
   if (!parsed.success) {
     throw new AppError(400, parsed.error.issues[0]!.message);
   }
   const data = parsed.data;
-
   if (!gamesRepo.findById(data.gameId)) {
     throw new AppError(400, 'Selected game does not exist');
   }
@@ -48,8 +47,7 @@ playsRouter.post('/', (req, res) => {
       throw new AppError(400, `Player ${s.playerId} does not exist`);
     }
   }
-
-  const play = playsRepo.create({
+  return {
     gameId: data.gameId,
     playedOn: data.playedOn,
     notes: data.notes ?? null,
@@ -58,7 +56,20 @@ playsRouter.post('/', (req, res) => {
       score: s.score,
       isWinner: s.isWinner,
     })),
-  });
+  };
+}
 
+playsRouter.post('/', (req, res) => {
+  const input = validateAndBuildInput(req.body);
+  const play = playsRepo.create(input);
   res.status(201).json(play);
+});
+
+playsRouter.put('/:id', (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id)) throw new AppError(400, 'Invalid play id');
+  if (!playsRepo.findById(id)) throw new AppError(404, 'Play not found');
+  const input = validateAndBuildInput(req.body);
+  const play = playsRepo.update(id, input);
+  res.json(play);
 });

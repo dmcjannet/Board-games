@@ -808,3 +808,222 @@ button.danger.small {
   border-top: none;
   padding-top: 0;
 }
+
+/* Clickable player names — appear anywhere in tables, cards, H2H, highlights */
+button.player-link {
+  background: transparent;
+  border: none;
+  color: inherit;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: rgba(148, 163, 184, 0.35);
+  text-underline-offset: 3px;
+}
+
+button.player-link:hover {
+  color: var(--primary);
+  text-decoration-color: var(--primary);
+}
+
+/* Ghost / secondary button used for Rename, Edit, Cancel */
+button.ghost {
+  padding: 0.35rem 0.75rem;
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.85rem;
+}
+
+button.ghost.small {
+  padding: 0.3rem 0.65rem;
+  font-size: 0.8rem;
+}
+
+button.ghost:hover:not(:disabled) {
+  background: var(--surface-2);
+}
+
+/* Snackbar */
+.snackbar {
+  position: fixed;
+  left: 50%;
+  bottom: 1.5rem;
+  transform: translateX(-50%);
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.7rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  max-width: calc(100% - 2rem);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  z-index: 200;
+  font-size: 0.9rem;
+}
+
+.snackbar-message {
+  flex: 1;
+}
+
+.snackbar-action {
+  background: transparent;
+  border: none;
+  color: var(--primary);
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0.15rem 0.5rem;
+  border-radius: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 0.75rem;
+}
+
+.snackbar-action:hover {
+  background: rgba(99, 102, 241, 0.15);
+}
+
+.snackbar-close {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 0 0.3rem;
+  line-height: 1;
+}
+
+.snackbar-close:hover {
+  color: var(--text);
+}
+
+/* Highlights card */
+.card.highlights {
+  background: linear-gradient(180deg, var(--surface) 0%, rgba(99, 102, 241, 0.05) 100%);
+}
+
+.highlight-block {
+  margin-bottom: 0.9rem;
+}
+
+.highlight-block:last-child {
+  margin-bottom: 0;
+}
+
+.highlight-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.35rem;
+}
+
+.highlight-value {
+  font-size: 1.6rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.highlight-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.highlight-list li {
+  padding: 0.4rem 0.6rem;
+  background: var(--surface-2);
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+/* Search input on Historical Plays */
+.search-input {
+  margin-bottom: 0.75rem;
+}
+
+/* Historical row action cluster: Edit + Delete */
+.row-buttons {
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+/* AddEntities rename / delete controls */
+.entity-row-main {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.entity-actions {
+  display: flex;
+  gap: 0.35rem;
+  margin-left: auto;
+}
+
+.rename-input {
+  width: auto;
+  flex: 1;
+  min-width: 8rem;
+  max-width: 20rem;
+}
+
+.row-error {
+  width: 100%;
+  margin: 0.25rem 0 0;
+}
+
+/* Player Profile Modal */
+.profile-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.profile-stat {
+  background: var(--surface-2);
+  border-radius: 8px;
+  padding: 0.55rem 0.7rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.profile-stat-label {
+  font-size: 0.7rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.profile-stat-value {
+  font-size: 1.35rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.profile-favorites p {
+  margin: 0.2rem 0;
+}
+
+.profile-section-title {
+  margin: 1.1rem 0 0.5rem;
+  font-size: 0.95rem;
+}
+
+.edit-play-form .field:last-of-type {
+  margin-bottom: 0.75rem;
+}

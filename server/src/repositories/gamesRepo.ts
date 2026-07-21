@@ -36,4 +36,14 @@ function create(name: string): Game {
   return findById(Number(info.lastInsertRowid))!;
 }
 
-export const gamesRepo = { findAll, findById, create };
+function rename(id: number, name: string): Game | undefined {
+  db.prepare('UPDATE games SET name = ? WHERE id = ?').run(name, id);
+  return findById(id);
+}
+
+function deleteById(id: number): boolean {
+  const info = db.prepare('DELETE FROM games WHERE id = ?').run(id);
+  return info.changes > 0;
+}
+
+export const gamesRepo = { findAll, findById, create, rename, deleteById };
