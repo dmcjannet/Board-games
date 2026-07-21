@@ -38,6 +38,17 @@ Optionally seed a few sample games and players first (idempotent):
 npm run seed
 ```
 
+Or seed a full demo dataset (4 players, 5 games, 100 plays with realistic
+scores and per-player skill differences) to explore the leaderboard and
+Compare tabs:
+
+```bash
+npm run seed:demo
+```
+
+`seed:demo` refuses to run if any plays already exist; delete `server/data/`
+first to start fresh.
+
 ## Run (production)
 
 ```bash

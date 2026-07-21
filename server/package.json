@@ -7,7 +7,8 @@
     "dev": "tsx watch src/index.ts",
     "start": "cross-env NODE_ENV=production tsx src/index.ts",
     "typecheck": "tsc --noEmit",
-    "seed": "tsx src/db/seed.ts"
+    "seed": "tsx src/db/seed.ts",
+    "seed:demo": "tsx src/db/seed-demo.ts"
   },
   "dependencies": {
     "better-sqlite3": "^12.11.1",
