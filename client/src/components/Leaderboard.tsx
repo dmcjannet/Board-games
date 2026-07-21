@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api/client';
 import type { PlayerStats, StatsResponse } from '../types';
+import PlayerCountFilter from './PlayerCountFilter';
 
 interface Props {
   refreshKey: number;
@@ -52,14 +53,13 @@ function StatsTable({ rows }: { rows: PlayerStats[] }) {
 
 export default function Leaderboard({ refreshKey }: Props) {
   const [stats, setStats] = useState<StatsResponse | null>(null);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [filter, setFilter] = useState<number | null>(null);
 
   useEffect(() => {
     let active = true;
-    setLoading(true);
     api
-      .getStats()
+      .getStats(filter)
       .then((data) => {
         if (active) {
           setStats(data);
@@ -68,38 +68,49 @@ export default function Leaderboard({ refreshKey }: Props) {
       })
       .catch((err: unknown) => {
         if (active) setError(err instanceof Error ? err.message : 'Failed to load stats.');
-      })
-      .finally(() => {
-        if (active) setLoading(false);
       });
     return () => {
       active = false;
     };
-  }, [refreshKey]);
+  }, [refreshKey, filter]);
 
-  if (loading) return <p className="muted">Loading…</p>;
   if (error) return <p className="error">{error}</p>;
-  if (!stats || stats.overall.length === 0) {
-    return <p className="muted">No stats yet. Record a play to see the leaderboard.</p>;
-  }
+  if (!stats) return <p className="muted">Loading…</p>;
+
+  const hasData = stats.overall.length > 0;
 
   return (
     <div className="leaderboard">
-      <div className="card">
-        <h2>Overall</h2>
-        <StatsTable rows={stats.overall} />
-      </div>
-      {stats.games.map((g) => (
-        <div className="card" key={g.gameId}>
-          <div className="play-header">
-            <h3>{g.gameName}</h3>
-            <span className="date">
-              {g.totalPlays} {g.totalPlays === 1 ? 'play' : 'plays'}
-            </span>
+      <PlayerCountFilter
+        value={filter}
+        onChange={setFilter}
+        availableCounts={stats.availablePlayerCounts}
+      />
+      {hasData ? (
+        <>
+          <div className="card">
+            <h2>Overall{filter != null ? ` (${filter}-player)` : ''}</h2>
+            <StatsTable rows={stats.overall} />
           </div>
-          <StatsTable rows={g.leaderboard} />
-        </div>
-      ))}
+          {stats.games.map((g) => (
+            <div className="card" key={g.gameId}>
+              <div className="play-header">
+                <h3>{g.gameName}</h3>
+                <span className="date">
+                  {g.totalPlays} {g.totalPlays === 1 ? 'play' : 'plays'}
+                </span>
+              </div>
+              <StatsTable rows={g.leaderboard} />
+            </div>
+          ))}
+        </>
+      ) : (
+        <p className="muted">
+          {filter != null
+            ? `No plays with ${filter} players yet.`
+            : 'No stats yet. Record a play to see the leaderboard.'}
+        </p>
+      )}
     </div>
   );
 }

@@ -377,6 +377,37 @@ ul.scores .score {
   font-weight: 600;
 }
 
+.filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+  padding: 0.6rem 0.9rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.filter-chips .filter-label {
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.filter-chips .chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.filter-chips .chip {
+  padding: 0.3rem 0.7rem;
+  font-size: 0.8rem;
+}
+
 .section-header {
   display: flex;
   justify-content: space-between;

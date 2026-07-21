@@ -37,5 +37,8 @@ export const api = {
     request<Play>('/api/plays', { method: 'POST', body: JSON.stringify(payload) }),
   deletePlay: (id: number) => request<void>(`/api/plays/${id}`, { method: 'DELETE' }),
 
-  getStats: () => request<StatsResponse>('/api/stats'),
+  getStats: (playerCount?: number | null) => {
+    const query = playerCount != null ? `?players=${playerCount}` : '';
+    return request<StatsResponse>(`/api/stats${query}`);
+  },
 };

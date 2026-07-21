@@ -46,6 +46,7 @@ export interface GameLeaderboard {
 export interface StatsResponse {
   overall: PlayerStats[];
   games: GameLeaderboard[];
+  availablePlayerCounts: number[];
 }
 
 export interface CreatePlayPayload {

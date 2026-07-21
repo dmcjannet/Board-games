@@ -20,6 +20,7 @@ export interface GameLeaderboard {
 export interface StatsResponse {
   overall: PlayerStats[];
   games: GameLeaderboard[];
+  availablePlayerCounts: number[];
 }
 
 interface PlayerStatsRow {
@@ -53,7 +54,17 @@ function rowToStats(row: PlayerStatsRow): PlayerStats {
   };
 }
 
-function getOverall(): PlayerStats[] {
+// Restrict aggregate queries to plays whose player count matches `playerCount`.
+function playerCountClause(playerCount: number | null): { sql: string; args: number[] } {
+  if (playerCount == null) return { sql: '', args: [] };
+  return {
+    sql: 'AND ps.play_id IN (SELECT play_id FROM play_scores GROUP BY play_id HAVING COUNT(*) = ?)',
+    args: [playerCount],
+  };
+}
+
+function getOverall(playerCount: number | null): PlayerStats[] {
+  const { sql: filter, args } = playerCountClause(playerCount);
   const rows = db
     .prepare(
       `SELECT
@@ -65,26 +76,31 @@ function getOverall(): PlayerStats[] {
          MAX(ps.score) AS high_score
        FROM players p
        JOIN play_scores ps ON ps.player_id = p.id
+       WHERE 1=1 ${filter}
        GROUP BY p.id, p.name
        ORDER BY wins DESC, plays DESC, p.name COLLATE NOCASE`,
     )
-    .all() as PlayerStatsRow[];
+    .all(...args) as PlayerStatsRow[];
   return rows.map(rowToStats);
 }
 
-function getGameLeaderboards(): GameLeaderboard[] {
+function getGameLeaderboards(playerCount: number | null): GameLeaderboard[] {
+  const { sql: filter, args } = playerCountClause(playerCount);
+
   const games = db
     .prepare(
       `SELECT
          g.id AS game_id,
          g.name AS game_name,
-         COUNT(*) AS total_plays
+         COUNT(DISTINCT pl.id) AS total_plays
        FROM plays pl
        JOIN games g ON g.id = pl.game_id
+       JOIN play_scores ps ON ps.play_id = pl.id
+       WHERE 1=1 ${filter}
        GROUP BY g.id, g.name
        ORDER BY total_plays DESC, g.name COLLATE NOCASE`,
     )
-    .all() as GameSummaryRow[];
+    .all(...args) as GameSummaryRow[];
 
   const perPlayer = db
     .prepare(
@@ -99,10 +115,11 @@ function getGameLeaderboards(): GameLeaderboard[] {
        FROM play_scores ps
        JOIN plays pl ON pl.id = ps.play_id
        JOIN players p ON p.id = ps.player_id
+       WHERE 1=1 ${filter}
        GROUP BY pl.game_id, p.id, p.name
        ORDER BY pl.game_id, wins DESC, plays DESC, p.name COLLATE NOCASE`,
     )
-    .all() as GamePlayerStatsRow[];
+    .all(...args) as GamePlayerStatsRow[];
 
   const grouped = new Map<number, PlayerStats[]>();
   for (const row of perPlayer) {
@@ -122,10 +139,19 @@ function getGameLeaderboards(): GameLeaderboard[] {
   }));
 }
 
-function getStats(): StatsResponse {
+// Distinct player counts across ALL plays (unfiltered) — drives the filter chips.
+function getAvailablePlayerCounts(): number[] {
+  const rows = db
+    .prepare('SELECT DISTINCT c FROM (SELECT COUNT(*) AS c FROM play_scores GROUP BY play_id) ORDER BY c')
+    .all() as { c: number }[];
+  return rows.map((r) => r.c);
+}
+
+function getStats(playerCount: number | null): StatsResponse {
   return {
-    overall: getOverall(),
-    games: getGameLeaderboards(),
+    overall: getOverall(playerCount),
+    games: getGameLeaderboards(playerCount),
+    availablePlayerCounts: getAvailablePlayerCounts(),
   };
 }
 

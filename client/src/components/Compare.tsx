@@ -13,6 +13,7 @@ import {
 } from 'recharts';
 import { api } from '../api/client';
 import type { Player, Play, StatsResponse } from '../types';
+import PlayerCountFilter from './PlayerCountFilter';
 
 const PLAYER_COLORS = [
   '#6366f1',
@@ -112,13 +113,12 @@ export default function Compare({ refreshKey }: Props) {
   const [stats, setStats] = useState<StatsResponse | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [timelineGameId, setTimelineGameId] = useState<number | null>(null);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [playerCountFilter, setPlayerCountFilter] = useState<number | null>(null);
 
   useEffect(() => {
     let active = true;
-    setLoading(true);
-    Promise.all([api.getPlayers(), api.getRecentPlays(1000), api.getStats()])
+    Promise.all([api.getPlayers(), api.getRecentPlays(1000), api.getStats(playerCountFilter)])
       .then(([playersData, playsData, statsData]) => {
         if (!active) return;
         setPlayers(playersData);
@@ -134,14 +134,16 @@ export default function Compare({ refreshKey }: Props) {
       })
       .catch((err: unknown) => {
         if (active) setError(err instanceof Error ? err.message : 'Failed to load comparison data.');
-      })
-      .finally(() => {
-        if (active) setLoading(false);
       });
     return () => {
       active = false;
     };
-  }, [refreshKey]);
+  }, [refreshKey, playerCountFilter]);
+
+  const filteredPlays = useMemo(() => {
+    if (playerCountFilter == null) return plays;
+    return plays.filter((p) => p.scores.length === playerCountFilter);
+  }, [plays, playerCountFilter]);
 
   const selectedPlayers = useMemo(
     () => players.filter((p) => selectedIds.has(p.id)),
@@ -162,7 +164,7 @@ export default function Compare({ refreshKey }: Props) {
 
   const timelineData = useMemo(() => {
     if (timelineGameId == null) return [];
-    const relevantPlays = plays
+    const relevantPlays = filteredPlays
       .filter((p) => p.game.id === timelineGameId)
       .sort((a, b) => a.playedOn.localeCompare(b.playedOn));
     return relevantPlays.map((play) => {
@@ -173,12 +175,12 @@ export default function Compare({ refreshKey }: Props) {
       }
       return row;
     });
-  }, [plays, timelineGameId, selectedPlayers]);
+  }, [filteredPlays, timelineGameId, selectedPlayers]);
 
   const h2h = useMemo(() => {
     if (selectedPlayers.length !== 2) return null;
-    return computeH2H(plays, selectedPlayers[0]!, selectedPlayers[1]!);
-  }, [plays, selectedPlayers]);
+    return computeH2H(filteredPlays, selectedPlayers[0]!, selectedPlayers[1]!);
+  }, [filteredPlays, selectedPlayers]);
 
   function toggle(id: number) {
     setSelectedIds((prev) => {
@@ -189,19 +191,25 @@ export default function Compare({ refreshKey }: Props) {
     });
   }
 
-  if (loading) return <p className="muted">Loading…</p>;
   if (error) return <p className="error">{error}</p>;
+  if (!stats) return <p className="muted">Loading…</p>;
   if (players.length === 0) {
     return <p className="muted">Add players and record some plays first.</p>;
   }
 
-  const games = stats?.games ?? [];
+  const games = stats.games;
   const timelineHasData = timelineData.some((row) =>
     selectedPlayers.some((p) => typeof row[p.name] === 'number'),
   );
 
   return (
     <div className="compare">
+      <PlayerCountFilter
+        value={playerCountFilter}
+        onChange={setPlayerCountFilter}
+        availableCounts={stats.availablePlayerCounts}
+      />
+
       <div className="card">
         <h2>Select Players</h2>
         <div className="chips">
@@ -231,9 +239,13 @@ export default function Compare({ refreshKey }: Props) {
           {h2h && <H2HCard h2h={h2h} />}
 
           <div className="card">
-            <h2>Win Rate by Game</h2>
+            <h2>Win Rate by Game{playerCountFilter != null ? ` (${playerCountFilter}-player)` : ''}</h2>
             {games.length === 0 ? (
-              <p className="muted">No plays recorded yet.</p>
+              <p className="muted">
+                {playerCountFilter != null
+                  ? `No plays with ${playerCountFilter} players yet.`
+                  : 'No plays recorded yet.'}
+              </p>
             ) : (
               <div className="chart">
                 <ResponsiveContainer width="100%" height={280}>
@@ -279,7 +291,11 @@ export default function Compare({ refreshKey }: Props) {
               </select>
             </div>
             {!timelineHasData ? (
-              <p className="muted">No plays of this game involving the selected players.</p>
+              <p className="muted">
+                {playerCountFilter != null
+                  ? `No ${playerCountFilter}-player plays of this game involving the selected players.`
+                  : 'No plays of this game involving the selected players.'}
+              </p>
             ) : (
               <div className="chart">
                 <ResponsiveContainer width="100%" height={280}>
