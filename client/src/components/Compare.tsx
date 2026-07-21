@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Bar,
   BarChart,
@@ -33,6 +33,8 @@ const TOOLTIP_STYLE = {
   color: '#e2e8f0',
 };
 
+const DOUBLE_CLICK_MS = 400;
+
 function colorFor(index: number): string {
   return PLAYER_COLORS[index % PLAYER_COLORS.length]!;
 }
@@ -50,6 +52,12 @@ interface HeadToHead {
   sharedPlays: number;
 }
 
+interface DrillDown {
+  title: string;
+  subtitle?: string;
+  plays: Play[];
+}
+
 function computeH2H(plays: Play[], a: Player, b: Player): HeadToHead {
   let aWins = 0;
   let bWins = 0;
@@ -61,16 +69,11 @@ function computeH2H(plays: Play[], a: Player, b: Player): HeadToHead {
     if (!aScore || !bScore) continue;
     sharedPlays += 1;
 
-    // A play with multiple marked winners is a tie; it doesn't count as a
-    // win for anyone. Only a sole marked winner earns the win. A manual
-    // tiebreaker override that leaves one winner naturally lands here.
     const winnerCount = play.scores.reduce((n, s) => n + (s.isWinner ? 1 : 0), 0);
     if (winnerCount === 1) {
       if (aScore.isWinner) aWins += 1;
       else if (bScore.isWinner) bWins += 1;
-      // Otherwise a third player was the sole winner — not counted for either.
     } else if (winnerCount >= 2 && aScore.isWinner && bScore.isWinner) {
-      // Only counts as a head-to-head tie if A and B are both in the tied group.
       ties += 1;
     }
   }
@@ -117,6 +120,81 @@ function H2HCard({ h2h }: { h2h: HeadToHead }) {
   );
 }
 
+function PlayDetailList({ plays }: { plays: Play[] }) {
+  if (plays.length === 0) {
+    return <p className="muted">No matching plays.</p>;
+  }
+  const sorted = [...plays].sort((a, b) => b.playedOn.localeCompare(a.playedOn));
+  return (
+    <ul className="play-list">
+      {sorted.map((play) => {
+        const scores = [...play.scores].sort((a, b) => b.score - a.score);
+        return (
+          <li className="card play-item" key={play.id}>
+            <div className="play-summary-row">
+              <div className="play-summary" style={{ cursor: 'default' }}>
+                <div className="summary-top">
+                  <span className="col-date">{play.playedOn}</span>
+                  <span className="col-game">{play.game.name}</span>
+                </div>
+              </div>
+            </div>
+            <div className="play-detail">
+              <ul className="scores">
+                {scores.map((s) => (
+                  <li key={s.playerId} className={s.isWinner ? 'winner' : ''}>
+                    <span className="player">
+                      {s.playerName}
+                      {s.isWinner && <span className="badge">Winner</span>}
+                    </span>
+                    <span className="score">{s.score}</span>
+                  </li>
+                ))}
+              </ul>
+              {play.notes && <p className="notes">{play.notes}</p>}
+            </div>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+function DrillDownModal({
+  drillDown,
+  onClose,
+}: {
+  drillDown: DrillDown;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose();
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  return (
+    <div className="modal-backdrop" onClick={onClose} role="dialog" aria-modal="true">
+      <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <div>
+            <h2>{drillDown.title}</h2>
+            {drillDown.subtitle && <p className="muted small">{drillDown.subtitle}</p>}
+          </div>
+          <button type="button" className="modal-close" onClick={onClose} aria-label="Close">
+            ×
+          </button>
+        </div>
+        <div className="modal-body">
+          <PlayDetailList plays={drillDown.plays} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Compare({ refreshKey }: Props) {
   const [players, setPlayers] = useState<Player[]>([]);
   const [plays, setPlays] = useState<Play[]>([]);
@@ -125,6 +203,8 @@ export default function Compare({ refreshKey }: Props) {
   const [timelineGameId, setTimelineGameId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [playerCountFilter, setPlayerCountFilter] = useState<number | null>(null);
+  const [drillDown, setDrillDown] = useState<DrillDown | null>(null);
+  const lastClickRef = useRef<{ key: string; time: number } | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -201,6 +281,62 @@ export default function Compare({ refreshKey }: Props) {
     });
   }
 
+  // Simple manual double-click detection: two clicks on the same identifier
+  // within DOUBLE_CLICK_MS fire the action. First click is remembered; a click
+  // on a different key resets the memory.
+  function tryDoubleClick(key: string, action: () => void) {
+    const now =
+      typeof performance !== 'undefined' && typeof performance.now === 'function'
+        ? performance.now()
+        : Date.now();
+    const last = lastClickRef.current;
+    if (last && last.key === key && now - last.time < DOUBLE_CLICK_MS) {
+      action();
+      lastClickRef.current = null;
+    } else {
+      lastClickRef.current = { key, time: now };
+    }
+  }
+
+  function drillIntoBar(player: Player, gameName: string) {
+    const matches = filteredPlays.filter(
+      (p) => p.game.name === gameName && p.scores.some((s) => s.playerId === player.id),
+    );
+    const filterSuffix = playerCountFilter != null ? ` (${playerCountFilter}-player)` : '';
+    setDrillDown({
+      title: `${player.name} — ${gameName}${filterSuffix}`,
+      subtitle: `${matches.length} play${matches.length === 1 ? '' : 's'}`,
+      plays: matches,
+    });
+  }
+
+  function drillIntoTimelinePoint(date: string) {
+    if (timelineGameId == null) return;
+    const matches = filteredPlays.filter(
+      (p) => p.game.id === timelineGameId && p.playedOn === date,
+    );
+    if (matches.length === 0) return;
+    const gameName = matches[0]!.game.name;
+    setDrillDown({
+      title: `${gameName} — ${date}`,
+      subtitle: matches.length > 1 ? `${matches.length} plays on this date` : undefined,
+      plays: matches,
+    });
+  }
+
+  function handleBarClick(player: Player, data: unknown) {
+    const payload = data as { game?: string; payload?: { game?: string } };
+    const gameName = payload?.game ?? payload?.payload?.game;
+    if (typeof gameName !== 'string') return;
+    tryDoubleClick(`bar:${player.id}:${gameName}`, () => drillIntoBar(player, gameName));
+  }
+
+  function handleLineChartClick(state: unknown) {
+    const label = (state as { activeLabel?: string } | null)?.activeLabel;
+    if (typeof label !== 'string') return;
+    tryDoubleClick(`line:${label}`, () => drillIntoTimelinePoint(label));
+  }
+
   if (error) return <p className="error">{error}</p>;
   if (!stats) return <p className="muted">Loading…</p>;
   if (players.length === 0) {
@@ -257,29 +393,38 @@ export default function Compare({ refreshKey }: Props) {
                   : 'No plays recorded yet.'}
               </p>
             ) : (
-              <div className="chart">
-                <ResponsiveContainer width="100%" height={280}>
-                  <BarChart data={winRateByGame} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                    <CartesianGrid stroke="#334155" strokeDasharray="3 3" />
-                    <XAxis dataKey="game" stroke="#94a3b8" tick={{ fontSize: 12 }} />
-                    <YAxis
-                      stroke="#94a3b8"
-                      tick={{ fontSize: 12 }}
-                      domain={[0, 100]}
-                      tickFormatter={(v: number) => `${v}%`}
-                    />
-                    <Tooltip
-                      contentStyle={TOOLTIP_STYLE}
-                      cursor={{ fill: 'rgba(255,255,255,0.04)' }}
-                      formatter={(value) => `${value}%`}
-                    />
-                    <Legend wrapperStyle={{ fontSize: 13 }} />
-                    {selectedPlayers.map((p, i) => (
-                      <Bar key={p.id} dataKey={p.name} fill={colorFor(i)} radius={[4, 4, 0, 0]} />
-                    ))}
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
+              <>
+                <div className="chart interactive-chart">
+                  <ResponsiveContainer width="100%" height={280}>
+                    <BarChart data={winRateByGame} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                      <CartesianGrid stroke="#334155" strokeDasharray="3 3" />
+                      <XAxis dataKey="game" stroke="#94a3b8" tick={{ fontSize: 12 }} />
+                      <YAxis
+                        stroke="#94a3b8"
+                        tick={{ fontSize: 12 }}
+                        domain={[0, 100]}
+                        tickFormatter={(v: number) => `${v}%`}
+                      />
+                      <Tooltip
+                        contentStyle={TOOLTIP_STYLE}
+                        cursor={{ fill: 'rgba(255,255,255,0.04)' }}
+                        formatter={(value) => `${value}%`}
+                      />
+                      <Legend wrapperStyle={{ fontSize: 13 }} />
+                      {selectedPlayers.map((p, i) => (
+                        <Bar
+                          key={p.id}
+                          dataKey={p.name}
+                          fill={colorFor(i)}
+                          radius={[4, 4, 0, 0]}
+                          onClick={(data) => handleBarClick(p, data)}
+                        />
+                      ))}
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+                <p className="muted small">Double-click a bar to see that player&apos;s plays of that game.</p>
+              </>
             )}
           </div>
 
@@ -307,32 +452,41 @@ export default function Compare({ refreshKey }: Props) {
                   : 'No plays of this game involving the selected players.'}
               </p>
             ) : (
-              <div className="chart">
-                <ResponsiveContainer width="100%" height={280}>
-                  <LineChart data={timelineData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                    <CartesianGrid stroke="#334155" strokeDasharray="3 3" />
-                    <XAxis dataKey="date" stroke="#94a3b8" tick={{ fontSize: 11 }} />
-                    <YAxis stroke="#94a3b8" tick={{ fontSize: 12 }} />
-                    <Tooltip contentStyle={TOOLTIP_STYLE} />
-                    <Legend wrapperStyle={{ fontSize: 13 }} />
-                    {selectedPlayers.map((p, i) => (
-                      <Line
-                        key={p.id}
-                        type="monotone"
-                        dataKey={p.name}
-                        stroke={colorFor(i)}
-                        strokeWidth={2}
-                        dot={{ r: 4 }}
-                        connectNulls
-                      />
-                    ))}
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
+              <>
+                <div className="chart interactive-chart">
+                  <ResponsiveContainer width="100%" height={280}>
+                    <LineChart
+                      data={timelineData}
+                      margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                      onClick={handleLineChartClick}
+                    >
+                      <CartesianGrid stroke="#334155" strokeDasharray="3 3" />
+                      <XAxis dataKey="date" stroke="#94a3b8" tick={{ fontSize: 11 }} />
+                      <YAxis stroke="#94a3b8" tick={{ fontSize: 12 }} />
+                      <Tooltip contentStyle={TOOLTIP_STYLE} />
+                      <Legend wrapperStyle={{ fontSize: 13 }} />
+                      {selectedPlayers.map((p, i) => (
+                        <Line
+                          key={p.id}
+                          type="monotone"
+                          dataKey={p.name}
+                          stroke={colorFor(i)}
+                          strokeWidth={2}
+                          dot={{ r: 4 }}
+                          connectNulls
+                        />
+                      ))}
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+                <p className="muted small">Double-click a point on the chart to see the play from that date.</p>
+              </>
             )}
           </div>
         </>
       )}
+
+      {drillDown && <DrillDownModal drillDown={drillDown} onClose={() => setDrillDown(null)} />}
     </div>
   );
 }
