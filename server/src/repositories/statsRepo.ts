@@ -42,10 +42,7 @@ interface GameSummaryRow {
   total_plays: number;
 }
 
-// CTE listing plays that have exactly one marked winner. Plays where multiple
-// players tied for the win are excluded — a tie doesn't count as a win for
-// anyone. A user-applied tiebreaker (unchecking the co-winners) leaves a
-// single winner, which lands the play back in this set naturally.
+// Plays with exactly one marked winner — ties/no-winner plays don't credit anyone.
 const SOLO_WINNERS_CTE = `
   WITH solo_winners AS (
     SELECT play_id, MIN(player_id) AS winner_player_id
@@ -68,16 +65,49 @@ function rowToStats(row: PlayerStatsRow): PlayerStats {
   };
 }
 
-function playerCountClause(playerCount: number | null): { sql: string; args: number[] } {
-  if (playerCount == null) return { sql: '', args: [] };
-  return {
-    sql: 'AND ps.play_id IN (SELECT play_id FROM play_scores GROUP BY play_id HAVING COUNT(*) = ?)',
-    args: [playerCount],
-  };
+// Build the WHERE clause fragments that restrict aggregates to matching plays.
+// playerCount: only plays with exactly that number of participants.
+// playerIds: only plays where ALL listed players participated (true head-to-head).
+function buildPlayFilters(
+  playerCount: number | null,
+  playerIds: number[],
+): { where: string; args: number[] } {
+  const parts: string[] = [];
+  const args: number[] = [];
+
+  if (playerCount != null) {
+    parts.push(
+      'AND ps.play_id IN (SELECT play_id FROM play_scores GROUP BY play_id HAVING COUNT(*) = ?)',
+    );
+    args.push(playerCount);
+  }
+
+  if (playerIds.length > 0) {
+    const placeholders = playerIds.map(() => '?').join(',');
+    parts.push(
+      `AND ps.play_id IN (
+         SELECT play_id FROM play_scores
+         WHERE player_id IN (${placeholders})
+         GROUP BY play_id
+         HAVING COUNT(DISTINCT player_id) = ${playerIds.length}
+       )`,
+    );
+    args.push(...playerIds);
+  }
+
+  return { where: parts.join(' '), args };
 }
 
-function getOverall(playerCount: number | null): PlayerStats[] {
-  const { sql: filter, args } = playerCountClause(playerCount);
+// When players are picked, only show those players' rows in the aggregated tables.
+function buildPlayerRestriction(playerIds: number[]): { sql: string; args: number[] } {
+  if (playerIds.length === 0) return { sql: '', args: [] };
+  const placeholders = playerIds.map(() => '?').join(',');
+  return { sql: `AND p.id IN (${placeholders})`, args: [...playerIds] };
+}
+
+function getOverall(playerCount: number | null, playerIds: number[]): PlayerStats[] {
+  const { where, args } = buildPlayFilters(playerCount, playerIds);
+  const { sql: restriction, args: restrictionArgs } = buildPlayerRestriction(playerIds);
   const rows = db
     .prepare(
       `${SOLO_WINNERS_CTE}
@@ -91,16 +121,17 @@ function getOverall(playerCount: number | null): PlayerStats[] {
        FROM players p
        JOIN play_scores ps ON ps.player_id = p.id
        LEFT JOIN solo_winners sw ON sw.play_id = ps.play_id
-       WHERE 1=1 ${filter}
+       WHERE 1=1 ${where} ${restriction}
        GROUP BY p.id, p.name
        ORDER BY wins DESC, plays DESC, p.name COLLATE NOCASE`,
     )
-    .all(...args) as PlayerStatsRow[];
+    .all(...args, ...restrictionArgs) as PlayerStatsRow[];
   return rows.map(rowToStats);
 }
 
-function getGameLeaderboards(playerCount: number | null): GameLeaderboard[] {
-  const { sql: filter, args } = playerCountClause(playerCount);
+function getGameLeaderboards(playerCount: number | null, playerIds: number[]): GameLeaderboard[] {
+  const { where, args } = buildPlayFilters(playerCount, playerIds);
+  const { sql: restriction, args: restrictionArgs } = buildPlayerRestriction(playerIds);
 
   const games = db
     .prepare(
@@ -111,7 +142,7 @@ function getGameLeaderboards(playerCount: number | null): GameLeaderboard[] {
        FROM plays pl
        JOIN games g ON g.id = pl.game_id
        JOIN play_scores ps ON ps.play_id = pl.id
-       WHERE 1=1 ${filter}
+       WHERE 1=1 ${where}
        GROUP BY g.id, g.name
        ORDER BY total_plays DESC, g.name COLLATE NOCASE`,
     )
@@ -132,11 +163,11 @@ function getGameLeaderboards(playerCount: number | null): GameLeaderboard[] {
        JOIN plays pl ON pl.id = ps.play_id
        JOIN players p ON p.id = ps.player_id
        LEFT JOIN solo_winners sw ON sw.play_id = ps.play_id
-       WHERE 1=1 ${filter}
+       WHERE 1=1 ${where} ${restriction}
        GROUP BY pl.game_id, p.id, p.name
        ORDER BY pl.game_id, wins DESC, plays DESC, p.name COLLATE NOCASE`,
     )
-    .all(...args) as GamePlayerStatsRow[];
+    .all(...args, ...restrictionArgs) as GamePlayerStatsRow[];
 
   const grouped = new Map<number, PlayerStats[]>();
   for (const row of perPlayer) {
@@ -163,10 +194,10 @@ function getAvailablePlayerCounts(): number[] {
   return rows.map((r) => r.c);
 }
 
-function getStats(playerCount: number | null): StatsResponse {
+function getStats(playerCount: number | null, playerIds: number[]): StatsResponse {
   return {
-    overall: getOverall(playerCount),
-    games: getGameLeaderboards(playerCount),
+    overall: getOverall(playerCount, playerIds),
+    games: getGameLeaderboards(playerCount, playerIds),
     availablePlayerCounts: getAvailablePlayerCounts(),
   };
 }

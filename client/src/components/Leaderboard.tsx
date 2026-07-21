@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { api } from '../api/client';
-import type { PlayerStats, StatsResponse } from '../types';
+import type { Player, PlayerStats, StatsResponse } from '../types';
 import PlayerCountFilter from './PlayerCountFilter';
 
 interface Props {
@@ -17,7 +17,7 @@ function formatAvg(value: number): string {
 
 function StatsTable({ rows }: { rows: PlayerStats[] }) {
   if (rows.length === 0) {
-    return <p className="muted">No plays recorded yet.</p>;
+    return <p className="muted">No matching plays.</p>;
   }
   return (
     <div className="table-scroll">
@@ -52,14 +52,31 @@ function StatsTable({ rows }: { rows: PlayerStats[] }) {
 }
 
 export default function Leaderboard({ refreshKey }: Props) {
+  const [players, setPlayers] = useState<Player[]>([]);
   const [stats, setStats] = useState<StatsResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<number | null>(null);
+  const [playerCountFilter, setPlayerCountFilter] = useState<number | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     let active = true;
     api
-      .getStats(filter)
+      .getPlayers()
+      .then((data) => {
+        if (active) setPlayers(data);
+      })
+      .catch((err: unknown) => {
+        if (active) setError(err instanceof Error ? err.message : 'Failed to load players.');
+      });
+    return () => {
+      active = false;
+    };
+  }, [refreshKey]);
+
+  useEffect(() => {
+    let active = true;
+    api
+      .getStats(playerCountFilter, Array.from(selectedIds))
       .then((data) => {
         if (active) {
           setStats(data);
@@ -72,7 +89,26 @@ export default function Leaderboard({ refreshKey }: Props) {
     return () => {
       active = false;
     };
-  }, [refreshKey, filter]);
+  }, [refreshKey, playerCountFilter, selectedIds]);
+
+  function togglePlayer(id: number) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  const overallTitle = useMemo(() => {
+    if (selectedIds.size === 0) return 'Overall';
+    const selectedNames = players.filter((p) => selectedIds.has(p.id)).map((p) => p.name);
+    if (selectedNames.length === 2) return `${selectedNames[0]} vs ${selectedNames[1]}`;
+    if (selectedNames.length === 1) return selectedNames[0] ?? 'Overall';
+    return selectedNames.join(', ');
+  }, [players, selectedIds]);
+
+  const suffix = playerCountFilter != null ? ` (${playerCountFilter}-player)` : '';
 
   if (error) return <p className="error">{error}</p>;
   if (!stats) return <p className="muted">Loading…</p>;
@@ -82,14 +118,47 @@ export default function Leaderboard({ refreshKey }: Props) {
   return (
     <div className="leaderboard">
       <PlayerCountFilter
-        value={filter}
-        onChange={setFilter}
+        value={playerCountFilter}
+        onChange={setPlayerCountFilter}
         availableCounts={stats.availablePlayerCounts}
       />
+
+      {players.length > 0 && (
+        <div className="card">
+          <h2>Filter by Player</h2>
+          <div className="chips">
+            {players.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                className={`chip${selectedIds.has(p.id) ? ' selected' : ''}`}
+                onClick={() => togglePlayer(p.id)}
+              >
+                {p.name}
+              </button>
+            ))}
+          </div>
+          {selectedIds.size >= 2 && (
+            <p className="muted small">
+              Showing head-to-head across plays where all {selectedIds.size} selected players participated.
+            </p>
+          )}
+          {selectedIds.size === 1 && (
+            <p className="muted small">Showing only this player&apos;s stats. Pick another to see head-to-head.</p>
+          )}
+          {selectedIds.size === 0 && (
+            <p className="muted small">Pick two or more players to see true head-to-head win rates.</p>
+          )}
+        </div>
+      )}
+
       {hasData ? (
         <>
           <div className="card">
-            <h2>Overall{filter != null ? ` (${filter}-player)` : ''}</h2>
+            <h2>
+              {overallTitle}
+              {suffix}
+            </h2>
             <StatsTable rows={stats.overall} />
           </div>
           {stats.games.map((g) => (
@@ -106,9 +175,11 @@ export default function Leaderboard({ refreshKey }: Props) {
         </>
       ) : (
         <p className="muted">
-          {filter != null
-            ? `No plays with ${filter} players yet.`
-            : 'No stats yet. Record a play to see the leaderboard.'}
+          {selectedIds.size >= 2
+            ? 'The selected players haven’t played together in a matching play yet.'
+            : playerCountFilter != null
+              ? `No plays with ${playerCountFilter} players yet.`
+              : 'No stats yet. Record a play to see the leaderboard.'}
         </p>
       )}
     </div>
