@@ -74,6 +74,7 @@ Then open http://localhost:3001.
 | GET    | `/api/plays`      | Recent plays (newest first), `?limit=`       |
 | GET    | `/api/plays/:id`  | A single play with nested game + scores      |
 | POST   | `/api/plays`      | Record a play (game + date + scores), atomic |
+| DELETE | `/api/plays/:id`  | Delete a play (scores cascade)               |
 | GET    | `/api/stats`      | Overall + per-game leaderboards              |
 
 `POST /api/plays` body:

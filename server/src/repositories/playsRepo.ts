@@ -87,4 +87,9 @@ function create(input: CreatePlayInput): Play {
   return findById(playId)!;
 }
 
-export const playsRepo = { create, findById, findRecent };
+function deleteById(id: number): boolean {
+  const info = db.prepare('DELETE FROM plays WHERE id = ?').run(id);
+  return info.changes > 0;
+}
+
+export const playsRepo = { create, findById, findRecent, deleteById };

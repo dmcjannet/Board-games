@@ -3,12 +3,15 @@ import RecordPlayForm from './components/RecordPlayForm';
 import RecentPlays from './components/RecentPlays';
 import Leaderboard from './components/Leaderboard';
 import Compare from './components/Compare';
+import ManagePlays from './components/ManagePlays';
 
-type Tab = 'record' | 'recent' | 'leaderboard' | 'compare';
+type Tab = 'record' | 'recent' | 'leaderboard' | 'compare' | 'options';
 
 export default function App() {
   const [tab, setTab] = useState<Tab>('record');
   const [refreshKey, setRefreshKey] = useState(0);
+
+  const bumpRefresh = () => setRefreshKey((k) => k + 1);
 
   return (
     <div className="app">
@@ -43,6 +46,13 @@ export default function App() {
           >
             Compare
           </button>
+          <button
+            type="button"
+            className={tab === 'options' ? 'active' : ''}
+            onClick={() => setTab('options')}
+          >
+            Options
+          </button>
         </nav>
       </header>
 
@@ -50,7 +60,7 @@ export default function App() {
         {tab === 'record' && (
           <RecordPlayForm
             onSaved={() => {
-              setRefreshKey((k) => k + 1);
+              bumpRefresh();
               setTab('recent');
             }}
           />
@@ -58,6 +68,7 @@ export default function App() {
         {tab === 'recent' && <RecentPlays refreshKey={refreshKey} />}
         {tab === 'leaderboard' && <Leaderboard refreshKey={refreshKey} />}
         {tab === 'compare' && <Compare refreshKey={refreshKey} />}
+        {tab === 'options' && <ManagePlays refreshKey={refreshKey} onChanged={bumpRefresh} />}
       </main>
     </div>
   );

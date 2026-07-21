@@ -21,6 +21,18 @@ playsRouter.get('/:id', (req, res) => {
   res.json(play);
 });
 
+playsRouter.delete('/:id', (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id)) {
+    throw new AppError(400, 'Invalid play id');
+  }
+  const deleted = playsRepo.deleteById(id);
+  if (!deleted) {
+    throw new AppError(404, 'Play not found');
+  }
+  res.status(204).send();
+});
+
 playsRouter.post('/', (req, res) => {
   const parsed = createPlaySchema.safeParse(req.body);
   if (!parsed.success) {

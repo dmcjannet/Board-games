@@ -17,6 +17,9 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
     throw new Error(message);
   }
 
+  if (res.status === 204) {
+    return undefined as T;
+  }
   return res.json() as Promise<T>;
 }
 
@@ -32,6 +35,7 @@ export const api = {
   getRecentPlays: (limit = 20) => request<Play[]>(`/api/plays?limit=${limit}`),
   createPlay: (payload: CreatePlayPayload) =>
     request<Play>('/api/plays', { method: 'POST', body: JSON.stringify(payload) }),
+  deletePlay: (id: number) => request<void>(`/api/plays/${id}`, { method: 'DELETE' }),
 
   getStats: () => request<StatsResponse>('/api/stats'),
 };
