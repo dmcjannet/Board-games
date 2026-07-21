@@ -123,3 +123,51 @@ curl -s 'localhost:3001/api/plays?limit=5'
 
 Full UI interaction requires a browser; the curl sequence is the authoritative
 headless check.
+
+## Install on your phone (PWA)
+
+The client is a Progressive Web App — installable on iOS and Android home
+screens with a real app icon that opens fullscreen (no browser chrome).
+
+- **iOS Safari**: open the site → tap the Share button → **Add to Home Screen**.
+- **Android Chrome**: open the site → menu → **Install app** (or a prompt appears).
+
+Requires HTTPS in production (Fly gives you this automatically) or `localhost`
+for development. The service worker caches the app shell so it opens instantly
+and works offline for browsing; API calls always hit the network so stats are
+never stale.
+
+## Deploy to Fly.io
+
+The repo ships with a `Dockerfile` and `fly.toml`; deployment is three
+commands. Prereqs: a [Fly.io](https://fly.io) account and the `flyctl` CLI.
+
+```bash
+# 1. Sign in and launch the app.
+fly auth login
+fly launch --no-deploy   # accepts fly.toml; you'll pick a unique app name and region
+
+# 2. Create the persistent volume that holds the SQLite DB.
+#    Use the same region you picked above (default in fly.toml is iad).
+fly volumes create board_games_data --size 1 --region iad
+
+# 3. Deploy.
+fly deploy
+```
+
+Then `fly open` launches the site. The `fly.toml` sets `auto_stop_machines`
+so the machine sleeps when idle and wakes on the next request — the free tier
+handles a personal tracker comfortably.
+
+Your SQLite file lives at `/data/app.db` on the Fly volume. It's persistent
+across deploys and restarts. To back it up:
+
+```bash
+fly ssh console -C "cat /data/app.db" > backup.db
+```
+
+To seed demo data on the deployed instance (only if plays don't already exist):
+
+```bash
+fly ssh console -C "node_modules/.bin/tsx server/src/db/seed-demo.ts"
+```

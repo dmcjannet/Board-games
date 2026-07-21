@@ -1,0 +1,34 @@
+# Fly.io configuration.
+# `fly launch` will prompt you to overwrite `app` and `primary_region`; keep
+# the rest as-is.
+
+app = "board-game-tracker"
+primary_region = "iad"
+
+[build]
+
+[env]
+  PORT = "3001"
+  DB_PATH = "/data/app.db"
+
+# HTTP service: Fly terminates TLS and forwards to internal_port on the app.
+[http_service]
+  internal_port = 3001
+  force_https = true
+  # Scale to zero when idle — Fly wakes it on the next request. Keeps the
+  # free tier comfortable for a personal app.
+  auto_stop_machines = true
+  auto_start_machines = true
+  min_machines_running = 0
+
+# Persistent volume for the SQLite file. Create it once with:
+#   fly volumes create board_games_data --size 1 --region iad
+[[mounts]]
+  source = "board_games_data"
+  destination = "/data"
+
+# Single small machine is plenty for personal use.
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory_mb = 256
