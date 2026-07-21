@@ -2,6 +2,7 @@ export interface Game {
   id: number;
   name: string;
   createdAt: string;
+  tags: string[];
 }
 
 export interface Player {
@@ -47,6 +48,7 @@ export interface StatsResponse {
   overall: PlayerStats[];
   games: GameLeaderboard[];
   availablePlayerCounts: number[];
+  availableTags: string[];
 }
 
 export interface CreatePlayPayload {

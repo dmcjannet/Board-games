@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { api } from '../api/client';
 import type { Player, PlayerStats, StatsResponse } from '../types';
 import PlayerCountFilter from './PlayerCountFilter';
+import TagFilter from './TagFilter';
 
 interface Props {
   refreshKey: number;
@@ -57,6 +58,7 @@ export default function Leaderboard({ refreshKey }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [playerCountFilter, setPlayerCountFilter] = useState<number | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
 
   useEffect(() => {
     let active = true;
@@ -76,7 +78,7 @@ export default function Leaderboard({ refreshKey }: Props) {
   useEffect(() => {
     let active = true;
     api
-      .getStats(playerCountFilter, Array.from(selectedIds))
+      .getStats(playerCountFilter, Array.from(selectedIds), selectedTags)
       .then((data) => {
         if (active) {
           setStats(data);
@@ -89,7 +91,7 @@ export default function Leaderboard({ refreshKey }: Props) {
     return () => {
       active = false;
     };
-  }, [refreshKey, playerCountFilter, selectedIds]);
+  }, [refreshKey, playerCountFilter, selectedIds, selectedTags]);
 
   function togglePlayer(id: number) {
     setSelectedIds((prev) => {
@@ -121,6 +123,12 @@ export default function Leaderboard({ refreshKey }: Props) {
         value={playerCountFilter}
         onChange={setPlayerCountFilter}
         availableCounts={stats.availablePlayerCounts}
+      />
+
+      <TagFilter
+        value={selectedTags}
+        onChange={setSelectedTags}
+        availableTags={stats.availableTags}
       />
 
       {players.length > 0 && (
@@ -175,11 +183,13 @@ export default function Leaderboard({ refreshKey }: Props) {
         </>
       ) : (
         <p className="muted">
-          {selectedIds.size >= 2
-            ? 'The selected players haven’t played together in a matching play yet.'
-            : playerCountFilter != null
-              ? `No plays with ${playerCountFilter} players yet.`
-              : 'No stats yet. Record a play to see the leaderboard.'}
+          {selectedTags.length > 0
+            ? 'No plays match the current filters.'
+            : selectedIds.size >= 2
+              ? 'The selected players haven’t played together in a matching play yet.'
+              : playerCountFilter != null
+                ? `No plays with ${playerCountFilter} players yet.`
+                : 'No stats yet. Record a play to see the leaderboard.'}
         </p>
       )}
     </div>

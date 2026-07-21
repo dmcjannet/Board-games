@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { statsRepo } from '../repositories/statsRepo';
+import { tagsRepo } from '../repositories/tagsRepo';
 
 export const statsRouter = Router();
 
@@ -26,5 +27,18 @@ statsRouter.get('/', (req, res) => {
     );
   }
 
-  res.json(statsRepo.getStats(playerCount, playerIds));
+  let tags: string[] = [];
+  const rawTags = req.query.tags;
+  if (typeof rawTags === 'string' && rawTags !== '') {
+    tags = Array.from(
+      new Set(
+        rawTags
+          .split(',')
+          .map((t) => tagsRepo.normalize(t))
+          .filter((t) => t.length > 0),
+      ),
+    );
+  }
+
+  res.json(statsRepo.getStats(playerCount, playerIds, tags));
 });

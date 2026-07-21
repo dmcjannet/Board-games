@@ -1,4 +1,5 @@
 import { db } from '../db/connection';
+import { tagsRepo } from './tagsRepo';
 
 export interface PlayerStats {
   playerId: number;
@@ -21,6 +22,7 @@ export interface StatsResponse {
   overall: PlayerStats[];
   games: GameLeaderboard[];
   availablePlayerCounts: number[];
+  availableTags: string[];
 }
 
 interface PlayerStatsRow {
@@ -42,7 +44,6 @@ interface GameSummaryRow {
   total_plays: number;
 }
 
-// Plays with exactly one marked winner — ties/no-winner plays don't credit anyone.
 const SOLO_WINNERS_CTE = `
   WITH solo_winners AS (
     SELECT play_id, MIN(player_id) AS winner_player_id
@@ -65,15 +66,13 @@ function rowToStats(row: PlayerStatsRow): PlayerStats {
   };
 }
 
-// Build the WHERE clause fragments that restrict aggregates to matching plays.
-// playerCount: only plays with exactly that number of participants.
-// playerIds: only plays where ALL listed players participated (true head-to-head).
 function buildPlayFilters(
   playerCount: number | null,
   playerIds: number[],
-): { where: string; args: number[] } {
+  tags: string[],
+): { where: string; args: (number | string)[] } {
   const parts: string[] = [];
-  const args: number[] = [];
+  const args: (number | string)[] = [];
 
   if (playerCount != null) {
     parts.push(
@@ -95,18 +94,34 @@ function buildPlayFilters(
     args.push(...playerIds);
   }
 
+  if (tags.length > 0) {
+    const placeholders = tags.map(() => '?').join(',');
+    parts.push(
+      `AND ps.play_id IN (
+         SELECT pl.id FROM plays pl
+         JOIN game_tags gt ON gt.game_id = pl.game_id
+         JOIN tags t ON t.id = gt.tag_id
+         WHERE t.name IN (${placeholders})
+       )`,
+    );
+    args.push(...tags);
+  }
+
   return { where: parts.join(' '), args };
 }
 
-// When players are picked, only show those players' rows in the aggregated tables.
 function buildPlayerRestriction(playerIds: number[]): { sql: string; args: number[] } {
   if (playerIds.length === 0) return { sql: '', args: [] };
   const placeholders = playerIds.map(() => '?').join(',');
   return { sql: `AND p.id IN (${placeholders})`, args: [...playerIds] };
 }
 
-function getOverall(playerCount: number | null, playerIds: number[]): PlayerStats[] {
-  const { where, args } = buildPlayFilters(playerCount, playerIds);
+function getOverall(
+  playerCount: number | null,
+  playerIds: number[],
+  tags: string[],
+): PlayerStats[] {
+  const { where, args } = buildPlayFilters(playerCount, playerIds, tags);
   const { sql: restriction, args: restrictionArgs } = buildPlayerRestriction(playerIds);
   const rows = db
     .prepare(
@@ -129,8 +144,12 @@ function getOverall(playerCount: number | null, playerIds: number[]): PlayerStat
   return rows.map(rowToStats);
 }
 
-function getGameLeaderboards(playerCount: number | null, playerIds: number[]): GameLeaderboard[] {
-  const { where, args } = buildPlayFilters(playerCount, playerIds);
+function getGameLeaderboards(
+  playerCount: number | null,
+  playerIds: number[],
+  tags: string[],
+): GameLeaderboard[] {
+  const { where, args } = buildPlayFilters(playerCount, playerIds, tags);
   const { sql: restriction, args: restrictionArgs } = buildPlayerRestriction(playerIds);
 
   const games = db
@@ -189,16 +208,23 @@ function getGameLeaderboards(playerCount: number | null, playerIds: number[]): G
 
 function getAvailablePlayerCounts(): number[] {
   const rows = db
-    .prepare('SELECT DISTINCT c FROM (SELECT COUNT(*) AS c FROM play_scores GROUP BY play_id) ORDER BY c')
+    .prepare(
+      'SELECT DISTINCT c FROM (SELECT COUNT(*) AS c FROM play_scores GROUP BY play_id) ORDER BY c',
+    )
     .all() as { c: number }[];
   return rows.map((r) => r.c);
 }
 
-function getStats(playerCount: number | null, playerIds: number[]): StatsResponse {
+function getStats(
+  playerCount: number | null,
+  playerIds: number[],
+  tags: string[],
+): StatsResponse {
   return {
-    overall: getOverall(playerCount, playerIds),
-    games: getGameLeaderboards(playerCount, playerIds),
+    overall: getOverall(playerCount, playerIds, tags),
+    games: getGameLeaderboards(playerCount, playerIds, tags),
     availablePlayerCounts: getAvailablePlayerCounts(),
+    availableTags: tagsRepo.findInUse(),
   };
 }
 

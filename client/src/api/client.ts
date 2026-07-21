@@ -37,11 +37,19 @@ export const api = {
     request<Play>('/api/plays', { method: 'POST', body: JSON.stringify(payload) }),
   deletePlay: (id: number) => request<void>(`/api/plays/${id}`, { method: 'DELETE' }),
 
-  getStats: (playerCount?: number | null, playerIds?: number[]) => {
+  getStats: (playerCount?: number | null, playerIds?: number[], tags?: string[]) => {
     const params = new URLSearchParams();
     if (playerCount != null) params.set('players', String(playerCount));
     if (playerIds && playerIds.length > 0) params.set('playerIds', playerIds.join(','));
+    if (tags && tags.length > 0) params.set('tags', tags.join(','));
     const query = params.toString();
     return request<StatsResponse>(`/api/stats${query ? `?${query}` : ''}`);
   },
+
+  getTags: () => request<string[]>('/api/tags'),
+  setGameTags: (gameId: number, tags: string[]) =>
+    request<Game>(`/api/games/${gameId}/tags`, {
+      method: 'PUT',
+      body: JSON.stringify({ tags }),
+    }),
 };

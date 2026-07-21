@@ -1,4 +1,5 @@
 import { db } from '../db/connection';
+import { tagsRepo } from './tagsRepo';
 import type { Game } from '../types';
 
 interface GameRow {
@@ -7,20 +8,27 @@ interface GameRow {
   created_at: string;
 }
 
-const toGame = (row: GameRow): Game => ({
-  id: row.id,
-  name: row.name,
-  createdAt: row.created_at,
-});
+function toGame(row: GameRow, tags: string[]): Game {
+  return {
+    id: row.id,
+    name: row.name,
+    createdAt: row.created_at,
+    tags,
+  };
+}
 
 function findAll(): Game[] {
-  const rows = db.prepare('SELECT * FROM games ORDER BY name COLLATE NOCASE').all() as GameRow[];
-  return rows.map(toGame);
+  const rows = db
+    .prepare('SELECT * FROM games ORDER BY name COLLATE NOCASE')
+    .all() as GameRow[];
+  const tagsByGame = tagsRepo.findByGameIds(rows.map((r) => r.id));
+  return rows.map((r) => toGame(r, tagsByGame.get(r.id) ?? []));
 }
 
 function findById(id: number): Game | undefined {
   const row = db.prepare('SELECT * FROM games WHERE id = ?').get(id) as GameRow | undefined;
-  return row ? toGame(row) : undefined;
+  if (!row) return undefined;
+  return toGame(row, tagsRepo.findByGameId(row.id));
 }
 
 function create(name: string): Game {

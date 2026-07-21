@@ -12,8 +12,9 @@ import {
   YAxis,
 } from 'recharts';
 import { api } from '../api/client';
-import type { Player, Play, StatsResponse } from '../types';
+import type { Game, Player, Play, StatsResponse } from '../types';
 import PlayerCountFilter from './PlayerCountFilter';
+import TagFilter from './TagFilter';
 
 const PLAYER_COLORS = [
   '#6366f1',
@@ -197,21 +198,29 @@ function DrillDownModal({
 
 export default function Compare({ refreshKey }: Props) {
   const [players, setPlayers] = useState<Player[]>([]);
+  const [games, setGames] = useState<Game[]>([]);
   const [plays, setPlays] = useState<Play[]>([]);
   const [stats, setStats] = useState<StatsResponse | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [timelineGameId, setTimelineGameId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [playerCountFilter, setPlayerCountFilter] = useState<number | null>(null);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [drillDown, setDrillDown] = useState<DrillDown | null>(null);
   const lastClickRef = useRef<{ key: string; time: number } | null>(null);
 
   useEffect(() => {
     let active = true;
-    Promise.all([api.getPlayers(), api.getRecentPlays(1000), api.getStats(playerCountFilter)])
-      .then(([playersData, playsData, statsData]) => {
+    Promise.all([
+      api.getPlayers(),
+      api.getGames(),
+      api.getRecentPlays(1000),
+      api.getStats(playerCountFilter, [], selectedTags),
+    ])
+      .then(([playersData, gamesData, playsData, statsData]) => {
         if (!active) return;
         setPlayers(playersData);
+        setGames(gamesData);
         setPlays(playsData);
         setStats(statsData);
         setError(null);
@@ -228,12 +237,27 @@ export default function Compare({ refreshKey }: Props) {
     return () => {
       active = false;
     };
-  }, [refreshKey, playerCountFilter]);
+  }, [refreshKey, playerCountFilter, selectedTags]);
+
+  const gameTagsById = useMemo(() => {
+    const m = new Map<number, string[]>();
+    for (const g of games) m.set(g.id, g.tags);
+    return m;
+  }, [games]);
 
   const filteredPlays = useMemo(() => {
-    if (playerCountFilter == null) return plays;
-    return plays.filter((p) => p.scores.length === playerCountFilter);
-  }, [plays, playerCountFilter]);
+    let result = plays;
+    if (playerCountFilter != null) {
+      result = result.filter((p) => p.scores.length === playerCountFilter);
+    }
+    if (selectedTags.length > 0) {
+      result = result.filter((p) => {
+        const gameTags = gameTagsById.get(p.game.id) ?? [];
+        return gameTags.some((t) => selectedTags.includes(t));
+      });
+    }
+    return result;
+  }, [plays, playerCountFilter, selectedTags, gameTagsById]);
 
   const selectedPlayers = useMemo(
     () => players.filter((p) => selectedIds.has(p.id)),
@@ -343,7 +367,7 @@ export default function Compare({ refreshKey }: Props) {
     return <p className="muted">Add players and record some plays first.</p>;
   }
 
-  const games = stats.games;
+  const statsGames = stats.games;
   const timelineHasData = timelineData.some((row) =>
     selectedPlayers.some((p) => typeof row[p.name] === 'number'),
   );
@@ -354,6 +378,12 @@ export default function Compare({ refreshKey }: Props) {
         value={playerCountFilter}
         onChange={setPlayerCountFilter}
         availableCounts={stats.availablePlayerCounts}
+      />
+
+      <TagFilter
+        value={selectedTags}
+        onChange={setSelectedTags}
+        availableTags={stats.availableTags}
       />
 
       <div className="card">
@@ -386,7 +416,7 @@ export default function Compare({ refreshKey }: Props) {
 
           <div className="card">
             <h2>Win Rate by Game{playerCountFilter != null ? ` (${playerCountFilter}-player)` : ''}</h2>
-            {games.length === 0 ? (
+            {statsGames.length === 0 ? (
               <p className="muted">
                 {playerCountFilter != null
                   ? `No plays with ${playerCountFilter} players yet.`
@@ -435,10 +465,10 @@ export default function Compare({ refreshKey }: Props) {
                 className="inline-select"
                 value={timelineGameId ?? ''}
                 onChange={(e) => setTimelineGameId(Number(e.target.value))}
-                disabled={games.length === 0}
+                disabled={statsGames.length === 0}
               >
-                {games.length === 0 && <option value="">No games yet</option>}
-                {games.map((g) => (
+                {statsGames.length === 0 && <option value="">No games yet</option>}
+                {statsGames.map((g) => (
                   <option key={g.gameId} value={g.gameId}>
                     {g.gameName}
                   </option>

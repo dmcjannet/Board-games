@@ -1,7 +1,17 @@
 import { db } from './connection';
+import { tagsRepo } from '../repositories/tagsRepo';
 
 const GAMES = ['Catan', 'Wingspan', 'Ticket to Ride', 'Terraforming Mars', 'Carcassonne'] as const;
 type GameName = (typeof GAMES)[number];
+
+// Tags applied to each game so the tag filter has data to work with.
+const GAME_TAGS: Record<GameName, string[]> = {
+  Catan: ['strategy', 'medium'],
+  Wingspan: ['strategy', 'engine-building'],
+  'Ticket to Ride': ['strategy', 'family'],
+  'Terraforming Mars': ['strategy', 'engine-building', 'long'],
+  Carcassonne: ['family', 'quick'],
+};
 
 const PLAYERS = ['David', 'Emily', 'Will', 'Ellie'] as const;
 type PlayerName = (typeof PLAYERS)[number];
@@ -74,6 +84,11 @@ for (const g of GAMES) {
 const playerIds = new Map<PlayerName, number>();
 for (const p of PLAYERS) {
   playerIds.set(p, (selectPlayerId.get(p) as { id: number }).id);
+}
+
+// Attach the demo tag set to each game (idempotent — setForGame replaces).
+for (const g of GAMES) {
+  tagsRepo.setForGame(gameIds.get(g)!, GAME_TAGS[g]);
 }
 
 const insertPlay = db.prepare('INSERT INTO plays (game_id, played_on) VALUES (?, ?)');

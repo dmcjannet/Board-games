@@ -2,6 +2,7 @@ export interface Game {
   id: number;
   name: string;
   createdAt: string;
+  tags: string[];
 }
 
 export interface Player {
