@@ -183,6 +183,14 @@ export default function ManagePlays({ refreshKey, onChanged }: Props) {
                 </div>
                 {isExpanded && (
                   <div className="play-detail">
+                    {play.imageVersion && (
+                      <img
+                        src={`/api/plays/${play.id}/image?v=${play.imageVersion}`}
+                        alt=""
+                        className="play-photo"
+                        loading="lazy"
+                      />
+                    )}
                     <ul className="scores">
                       {sortedScores.map((s) => (
                         <li key={s.playerId} className={s.isWinner ? 'winner' : ''}>

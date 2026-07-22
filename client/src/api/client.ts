@@ -1,4 +1,13 @@
-import type { Game, Player, Play, CreatePlayPayload, StatsResponse } from '../types';
+import type {
+  Game,
+  Player,
+  Play,
+  CreatePlayPayload,
+  StatsResponse,
+  BGGSearchResult,
+  BGGGame,
+  BGGImportResult,
+} from '../types';
 
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
   const res = await fetch(url, {
@@ -69,6 +78,19 @@ export const api = {
     uploadImage(`/api/players/${playerId}/image`, file),
   deletePlayerImage: (playerId: number) =>
     request<void>(`/api/players/${playerId}/image`, { method: 'DELETE' }),
+
+  uploadPlayImage: (playId: number, file: File) =>
+    uploadImage<Play>(`/api/plays/${playId}/image`, file),
+  deletePlayImage: (playId: number) => request<void>(`/api/plays/${playId}/image`, { method: 'DELETE' }),
+
+  bggSearch: (query: string) =>
+    request<BGGSearchResult[]>(`/api/bgg/search?q=${encodeURIComponent(query)}`),
+  bggGetGame: (bggId: number) => request<BGGGame>(`/api/bgg/game/${bggId}`),
+  bggImportToGame: (gameId: number, bggId: number, replaceImage?: boolean) =>
+    request<BGGImportResult>(`/api/bgg/games/${gameId}/import`, {
+      method: 'POST',
+      body: JSON.stringify({ bggId, replaceImage: replaceImage ?? false }),
+    }),
 };
 
 async function uploadImage<T>(url: string, file: File): Promise<T> {

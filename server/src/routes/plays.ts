@@ -4,8 +4,11 @@ import { gamesRepo } from '../repositories/gamesRepo';
 import { playersRepo } from '../repositories/playersRepo';
 import { createPlaySchema } from '../schemas/play';
 import { AppError } from '../errors';
+import { attachImageRoutes } from './images';
 
 export const playsRouter = Router();
+
+attachImageRoutes(playsRouter, 'plays');
 
 playsRouter.get('/', (req, res) => {
   const requested = Number(req.query.limit);

@@ -50,6 +50,14 @@ export default function RecentPlays({ refreshKey }: Props) {
         const sorted = [...play.scores].sort((a, b) => b.score - a.score);
         return (
           <div className="card play-card" key={play.id}>
+            {play.imageVersion && (
+              <img
+                src={`/api/plays/${play.id}/image?v=${play.imageVersion}`}
+                alt=""
+                className="play-photo"
+                loading="lazy"
+              />
+            )}
             <div className="play-header">
               <div className="play-header-title">
                 <GameImage gameId={play.game.id} imageVersion={play.game.imageVersion} variant="thumb" alt={play.game.name} />

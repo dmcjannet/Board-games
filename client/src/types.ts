@@ -26,6 +26,7 @@ export interface Play {
   playedOn: string;
   notes: string | null;
   createdAt: string;
+  imageVersion: string | null;
   game: { id: number; name: string; imageVersion: string | null };
   scores: PlayScore[];
 }
@@ -52,6 +53,32 @@ export interface StatsResponse {
   games: GameLeaderboard[];
   availablePlayerCounts: number[];
   availableTags: string[];
+}
+
+export interface BGGSearchResult {
+  bggId: number;
+  name: string;
+  yearPublished: number | null;
+}
+
+export interface BGGGame {
+  bggId: number;
+  name: string;
+  yearPublished: number | null;
+  thumbnail: string | null;
+  image: string | null;
+  minPlayers: number | null;
+  maxPlayers: number | null;
+  playingTime: number | null;
+  categories: string[];
+  mechanics: string[];
+}
+
+export interface BGGImportResult {
+  game: Game;
+  addedTags: string[];
+  imageDownloaded: boolean;
+  imageError: string | null;
 }
 
 export interface CreatePlayPayload {

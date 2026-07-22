@@ -1136,3 +1136,114 @@ ul.scores .player {
   align-items: center;
   gap: 0.5rem;
 }
+
+/* Play photo — hero at the top of a play card / inside expanded detail */
+.play-photo {
+  width: 100%;
+  max-height: 340px;
+  object-fit: cover;
+  border-radius: 8px;
+  display: block;
+  margin-bottom: 0.75rem;
+}
+
+.play-card .play-photo {
+  margin: -1.25rem -1.25rem 0.75rem;
+  border-radius: var(--radius) var(--radius) 0 0;
+  max-height: 220px;
+}
+
+/* Photo picker in the Record / Edit form */
+.photo-picker {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.photo-preview {
+  max-width: 140px;
+  max-height: 90px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.photo-picker-actions {
+  display: flex;
+  gap: 0.35rem;
+}
+
+/* BGG search modal */
+.bgg-search-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.bgg-search-row .search-input {
+  flex: 1;
+  margin: 0;
+}
+
+.replace-image-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-bottom: 0.75rem;
+}
+
+.replace-image-toggle input {
+  width: auto;
+}
+
+.bgg-results {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.bgg-result-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.5rem 0.7rem;
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: left;
+  font-size: 0.9rem;
+}
+
+.bgg-result-button:hover:not(:disabled) {
+  border-color: var(--primary);
+}
+
+.bgg-result-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.bgg-result-year {
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.bgg-result-action {
+  color: var(--primary);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}

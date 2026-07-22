@@ -1,5 +1,5 @@
 import { db } from '../db/connection';
-import { imageVersion } from '../utils/images';
+import { deleteImage, imageVersion } from '../utils/images';
 import type { Play, PlayScore } from '../types';
 
 interface PlayRow {
@@ -52,6 +52,7 @@ function hydrate(row: PlayRow): Play {
     playedOn: row.played_on,
     notes: row.notes,
     createdAt: row.created_at,
+    imageVersion: imageVersion('plays', row.id),
     game: { ...gameRow, imageVersion: imageVersion('games', gameRow.id) },
     scores,
   };
@@ -91,6 +92,10 @@ function create(input: CreatePlayInput): Play {
 
 function deleteById(id: number): boolean {
   const info = db.prepare('DELETE FROM plays WHERE id = ?').run(id);
+  if (info.changes > 0) {
+    // Best-effort image cleanup; the row is gone even if this throws.
+    deleteImage('plays', id);
+  }
   return info.changes > 0;
 }
 

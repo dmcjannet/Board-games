@@ -5,6 +5,8 @@ import QuickAddInline from './QuickAddInline';
 import { useSnackbar } from '../context/SnackbarContext';
 import Avatar from './Avatar';
 import GameImage from './GameImage';
+import BGGSearchModal from './BGGSearchModal';
+import type { BGGImportResult } from '../types';
 
 interface Props {
   refreshKey: number;
@@ -273,6 +275,7 @@ export default function AddEntities({ refreshKey, onChanged }: Props) {
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [bggFor, setBggFor] = useState<Game | null>(null);
   const { show: showSnackbar } = useSnackbar();
 
   const load = useCallback(async () => {
@@ -352,6 +355,18 @@ export default function AddEntities({ refreshKey, onChanged }: Props) {
     onChanged();
   }
 
+  function handleBGGImported(result: BGGImportResult) {
+    setBggFor(null);
+    void load();
+    onChanged();
+    const parts: string[] = [];
+    if (result.addedTags.length > 0) parts.push(`${result.addedTags.length} tag(s) added`);
+    if (result.imageDownloaded) parts.push('box art downloaded');
+    if (result.imageError) parts.push(`image failed: ${result.imageError}`);
+    const summary = parts.length > 0 ? parts.join(' · ') : 'No new metadata';
+    showSnackbar(`BGG import: ${summary}`);
+  }
+
   if (loading) return <p className="muted">Loading…</p>;
   if (error) return <p className="error">{error}</p>;
 
@@ -365,7 +380,11 @@ export default function AddEntities({ refreshKey, onChanged }: Props) {
           <ul className="entity-list game-list">
             {games.map((g) => (
               <li key={g.id} className="game-row">
-                <RenameRow entity={g} onRename={renameGame} onDelete={deleteGame} />
+                <RenameRow entity={g} onRename={renameGame} onDelete={deleteGame}>
+                  <button type="button" className="ghost small" onClick={() => setBggFor(g)}>
+                    Import BGG
+                  </button>
+                </RenameRow>
                 <ImageUpload
                   hasImage={g.imageVersion != null}
                   previewNode={
@@ -424,6 +443,16 @@ export default function AddEntities({ refreshKey, onChanged }: Props) {
           Deleting a player is refused if they have recorded plays.
         </p>
       </div>
+
+      {bggFor && (
+        <BGGSearchModal
+          gameId={bggFor.id}
+          gameName={bggFor.name}
+          hasImage={bggFor.imageVersion != null}
+          onImported={handleBGGImported}
+          onClose={() => setBggFor(null)}
+        />
+      )}
     </div>
   );
 }

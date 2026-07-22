@@ -26,6 +26,7 @@ export interface Play {
   playedOn: string;
   notes: string | null;
   createdAt: string;
+  imageVersion: string | null;
   game: { id: number; name: string; imageVersion: string | null };
   scores: PlayScore[];
 }

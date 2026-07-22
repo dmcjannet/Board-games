@@ -6,6 +6,7 @@ import { playersRouter } from './routes/players';
 import { playsRouter } from './routes/plays';
 import { statsRouter } from './routes/stats';
 import { tagsRouter } from './routes/tags';
+import { bggRouter } from './routes/bgg';
 import { AppError } from './errors';
 
 export function createApp() {
@@ -20,6 +21,7 @@ export function createApp() {
   app.use('/api/plays', playsRouter);
   app.use('/api/stats', statsRouter);
   app.use('/api/tags', tagsRouter);
+  app.use('/api/bgg', bggRouter);
 
   // Serve the built client (production) when it exists, same-origin.
   const clientDist = fileURLToPath(new URL('../../client/dist', import.meta.url));

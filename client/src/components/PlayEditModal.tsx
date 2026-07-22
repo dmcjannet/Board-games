@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
 import { api } from '../api/client';
 import type { Game, Play, Player } from '../types';
 import GameSelect from './GameSelect';
@@ -53,6 +53,38 @@ export default function PlayEditModal({ play, onSaved, onClose }: Props) {
   const [rows, setRows] = useState<ScoreRowState[]>(() => rowsFromPlay(play));
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [imageVersion, setImageVersion] = useState<string | null>(play.imageVersion);
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const photoInputRef = useRef<HTMLInputElement | null>(null);
+
+  async function handlePhotoUpload(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPhotoBusy(true);
+    setError(null);
+    try {
+      const updated = await api.uploadPlayImage(play.id, file);
+      setImageVersion(updated.imageVersion);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Photo upload failed');
+    } finally {
+      setPhotoBusy(false);
+      if (photoInputRef.current) photoInputRef.current.value = '';
+    }
+  }
+
+  async function handlePhotoDelete() {
+    setPhotoBusy(true);
+    setError(null);
+    try {
+      await api.deletePlayImage(play.id);
+      setImageVersion(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Photo delete failed');
+    } finally {
+      setPhotoBusy(false);
+    }
+  }
 
   useEffect(() => {
     void api.getGames().then(setGames);
@@ -154,6 +186,46 @@ export default function PlayEditModal({ play, onSaved, onClose }: Props) {
             <div className="field">
               <label>Notes (optional)</label>
               <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
+            </div>
+
+            <div className="field">
+              <label>Photo (optional)</label>
+              <div className="photo-picker">
+                {imageVersion && (
+                  <img
+                    src={`/api/plays/${play.id}/image?v=${imageVersion}`}
+                    alt="play photo"
+                    className="photo-preview"
+                  />
+                )}
+                <div className="photo-picker-actions">
+                  <button
+                    type="button"
+                    className="ghost small"
+                    onClick={() => photoInputRef.current?.click()}
+                    disabled={photoBusy || saving}
+                  >
+                    {imageVersion ? 'Replace' : 'Add photo'}
+                  </button>
+                  {imageVersion && (
+                    <button
+                      type="button"
+                      className="danger small"
+                      onClick={() => void handlePhotoDelete()}
+                      disabled={photoBusy || saving}
+                    >
+                      Remove
+                    </button>
+                  )}
+                  <input
+                    ref={photoInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    onChange={(e) => void handlePhotoUpload(e)}
+                    hidden
+                  />
+                </div>
+              </div>
             </div>
 
             {error && <p className="error">{error}</p>}

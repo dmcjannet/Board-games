@@ -2,6 +2,7 @@ import { Router } from 'express';
 import multer from 'multer';
 import { gamesRepo } from '../repositories/gamesRepo';
 import { playersRepo } from '../repositories/playersRepo';
+import { playsRepo } from '../repositories/playsRepo';
 import { deleteImage, imageExists, imagePath, saveImage, type ImageKind } from '../utils/images';
 import { AppError } from '../errors';
 
@@ -20,7 +21,15 @@ const upload = multer({
 });
 
 function existsFor(kind: ImageKind, id: number): boolean {
-  return kind === 'games' ? gamesRepo.findById(id) != null : playersRepo.findById(id) != null;
+  if (kind === 'games') return gamesRepo.findById(id) != null;
+  if (kind === 'players') return playersRepo.findById(id) != null;
+  return playsRepo.findById(id) != null;
+}
+
+function labelFor(kind: ImageKind): string {
+  if (kind === 'games') return 'Game';
+  if (kind === 'players') return 'Player';
+  return 'Play';
 }
 
 // Mounts /:id/image routes onto an existing router (games or players).
@@ -39,7 +48,7 @@ export function attachImageRoutes(router: Router, kind: ImageKind) {
     const id = Number(req.params.id);
     if (!Number.isFinite(id)) throw new AppError(400, 'Invalid id');
     if (!existsFor(kind, id)) {
-      throw new AppError(404, kind === 'games' ? 'Game not found' : 'Player not found');
+      throw new AppError(404, `${labelFor(kind)} not found`);
     }
     if (!req.file) throw new AppError(400, 'No image file provided');
     try {
@@ -47,7 +56,10 @@ export function attachImageRoutes(router: Router, kind: ImageKind) {
     } catch (err) {
       throw new AppError(400, `Failed to process image: ${err instanceof Error ? err.message : 'unknown'}`);
     }
-    const entity = kind === 'games' ? gamesRepo.findById(id) : playersRepo.findById(id);
+    const entity =
+      kind === 'games' ? gamesRepo.findById(id)
+      : kind === 'players' ? playersRepo.findById(id)
+      : playsRepo.findById(id);
     res.json(entity);
   });
 

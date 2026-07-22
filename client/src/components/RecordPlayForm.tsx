@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
 import { api } from '../api/client';
 import type { Game, Player } from '../types';
 import GameSelect from './GameSelect';
@@ -42,8 +42,31 @@ export default function RecordPlayForm({ refreshKey, onSaved }: Props) {
   const [playedOn, setPlayedOn] = useState<string>(today());
   const [notes, setNotes] = useState('');
   const [rows, setRows] = useState<ScoreRowState[]>([newRow(), newRow()]);
+  const [photo, setPhoto] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const photoInputRef = useRef<HTMLInputElement | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!photo) {
+      setPhotoPreview(null);
+      return;
+    }
+    const url = URL.createObjectURL(photo);
+    setPhotoPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [photo]);
+
+  function handlePhotoChange(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0] ?? null;
+    setPhoto(file);
+  }
+
+  function clearPhoto() {
+    setPhoto(null);
+    if (photoInputRef.current) photoInputRef.current.value = '';
+  }
 
   useEffect(() => {
     void api.getGames().then(setGames);
@@ -90,7 +113,7 @@ export default function RecordPlayForm({ refreshKey, onSaved }: Props) {
 
     setSaving(true);
     try {
-      await api.createPlay({
+      const created = await api.createPlay({
         gameId,
         playedOn,
         notes: notes.trim() || null,
@@ -100,10 +123,21 @@ export default function RecordPlayForm({ refreshKey, onSaved }: Props) {
           isWinner: r.isWinner,
         })),
       });
+      if (photo) {
+        try {
+          await api.uploadPlayImage(created.id, photo);
+        } catch (imgErr) {
+          setError(
+            `Play saved, but photo upload failed: ${imgErr instanceof Error ? imgErr.message : 'unknown'}`,
+          );
+          return;
+        }
+      }
       setRows([newRow(), newRow()]);
       setNotes('');
       setGameId(null);
       setPlayedOn(today());
+      clearPhoto();
       onSaved();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save play.');
@@ -148,6 +182,35 @@ export default function RecordPlayForm({ refreshKey, onSaved }: Props) {
       <div className="field">
         <label>Notes (optional)</label>
         <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
+      </div>
+
+      <div className="field">
+        <label>Photo (optional)</label>
+        <div className="photo-picker">
+          {photoPreview && <img src={photoPreview} alt="preview" className="photo-preview" />}
+          <div className="photo-picker-actions">
+            <button
+              type="button"
+              className="ghost small"
+              onClick={() => photoInputRef.current?.click()}
+              disabled={saving}
+            >
+              {photo ? 'Replace' : 'Add photo'}
+            </button>
+            {photo && (
+              <button type="button" className="danger small" onClick={clearPhoto} disabled={saving}>
+                Remove
+              </button>
+            )}
+            <input
+              ref={photoInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              onChange={handlePhotoChange}
+              hidden
+            />
+          </div>
+        </div>
       </div>
 
       {error && <p className="error">{error}</p>}
