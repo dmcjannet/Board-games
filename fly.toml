@@ -8,12 +8,15 @@ primary_region = "iad"
 [build]
 
 [env]
-  PORT = "3001"
+  PORT = "8080"
+  HOST = "0.0.0.0"
   DB_PATH = "/data/app.db"
 
 # HTTP service: Fly terminates TLS and forwards to internal_port on the app.
+# Fly's default internal_port is 8080, so we match that to avoid mismatches
+# if fly launch ever regenerates this file.
 [http_service]
-  internal_port = 3001
+  internal_port = 8080
   force_https = true
   # Scale to zero when idle — Fly wakes it on the next request. Keeps the
   # free tier comfortable for a personal app.

@@ -60,7 +60,10 @@ Then open http://localhost:3001.
 
 ## Configuration
 
-- `PORT` — API port (default `3001`). The Vite dev proxy reads the same variable.
+- `PORT` — API port (default `3001` in dev, `8080` inside the Docker image to
+  match Fly's expected internal port). The Vite dev proxy reads the same variable.
+- `HOST` — bind address (default `0.0.0.0` so containers and iPhone-on-same-Wi-Fi
+  both work). Set to `127.0.0.1` if you only want local-machine access.
 - `DB_PATH` — SQLite file location (default `server/data/app.db`). The directory is
   created automatically. The database file is gitignored.
 

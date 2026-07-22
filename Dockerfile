@@ -27,7 +27,8 @@ FROM node:22-alpine
 WORKDIR /app
 
 ENV NODE_ENV=production \
-    PORT=3001 \
+    PORT=8080 \
+    HOST=0.0.0.0 \
     DB_PATH=/data/app.db
 
 # Runtime needs tsx (which lives in server/node_modules) plus the compiled
@@ -37,7 +38,7 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/server ./server
 COPY --from=builder /app/client/dist ./client/dist
 
-EXPOSE 3001
+EXPOSE 8080
 
 # Use tsx directly rather than the workspace start script so we don't need
 # cross-env inside the container.
