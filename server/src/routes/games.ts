@@ -4,12 +4,15 @@ import { gamesRepo } from '../repositories/gamesRepo';
 import { tagsRepo } from '../repositories/tagsRepo';
 import { nameSchema } from '../schemas/play';
 import { AppError } from '../errors';
+import { attachImageRoutes } from './images';
 
 const setTagsSchema = z.object({
   tags: z.array(z.string().trim().min(1).max(40)).max(20),
 });
 
 export const gamesRouter = Router();
+
+attachImageRoutes(gamesRouter, 'games');
 
 gamesRouter.get('/', (_req, res) => {
   res.json(gamesRepo.findAll());

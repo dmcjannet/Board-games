@@ -1,5 +1,6 @@
 import { db } from '../db/connection';
 import { tagsRepo } from './tagsRepo';
+import { imageVersion } from '../utils/images';
 import type { Game } from '../types';
 
 interface GameRow {
@@ -14,6 +15,7 @@ function toGame(row: GameRow, tags: string[]): Game {
     name: row.name,
     createdAt: row.created_at,
     tags,
+    imageVersion: imageVersion('games', row.id),
   };
 }
 

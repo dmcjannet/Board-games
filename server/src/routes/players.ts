@@ -2,8 +2,11 @@ import { Router } from 'express';
 import { playersRepo } from '../repositories/playersRepo';
 import { nameSchema } from '../schemas/play';
 import { AppError } from '../errors';
+import { attachImageRoutes } from './images';
 
 export const playersRouter = Router();
+
+attachImageRoutes(playersRouter, 'players');
 
 playersRouter.get('/', (_req, res) => {
   res.json(playersRepo.findAll());

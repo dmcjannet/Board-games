@@ -7,9 +7,13 @@ FROM node:22-alpine AS builder
 
 WORKDIR /app
 
-# System deps for better-sqlite3's native binding fallback (prebuilds usually
-# work on alpine, but keep the compiler around as a safety net).
-RUN apk add --no-cache python3 make g++
+# System deps for native modules:
+#  - python3/make/g++ let better-sqlite3 compile from source if a prebuild
+#    binary isn't available for this alpine tag.
+#  - vips is libvips, the image-processing library sharp wraps. Sharp
+#    downloads a prebuilt binary on install for most platforms, but adding
+#    the OS library keeps things working if the prebuild is unavailable.
+RUN apk add --no-cache python3 make g++ vips
 
 # Install deps first for better layer caching.
 COPY package*.json tsconfig.base.json ./
@@ -25,6 +29,10 @@ RUN npm run build
 FROM node:22-alpine
 
 WORKDIR /app
+
+# Runtime library for sharp (libvips) — needed if the prebuilt binary
+# dynamically links it.
+RUN apk add --no-cache vips
 
 ENV NODE_ENV=production \
     PORT=8080 \

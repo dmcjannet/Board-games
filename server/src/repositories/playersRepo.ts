@@ -1,4 +1,5 @@
 import { db } from '../db/connection';
+import { imageVersion } from '../utils/images';
 import type { Player } from '../types';
 
 interface PlayerRow {
@@ -11,6 +12,7 @@ const toPlayer = (row: PlayerRow): Player => ({
   id: row.id,
   name: row.name,
   createdAt: row.created_at,
+  imageVersion: imageVersion('players', row.id),
 });
 
 function findAll(): Player[] {

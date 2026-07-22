@@ -4,6 +4,7 @@ import type { Player, PlayerStats, StatsResponse } from '../types';
 import PlayerCountFilter from './PlayerCountFilter';
 import TagFilter from './TagFilter';
 import Highlights from './Highlights';
+import Avatar from './Avatar';
 import { usePlayerProfile } from '../context/PlayerProfileContext';
 
 interface Props {
@@ -18,7 +19,15 @@ function formatAvg(value: number): string {
   return Number.isFinite(value) ? value.toFixed(1) : '—';
 }
 
-function StatsTable({ rows, onPlayerClick }: { rows: PlayerStats[]; onPlayerClick: (id: number) => void }) {
+function StatsTable({
+  rows,
+  onPlayerClick,
+  imageMap,
+}: {
+  rows: PlayerStats[];
+  onPlayerClick: (id: number) => void;
+  imageMap: Map<number, string | null>;
+}) {
   if (rows.length === 0) {
     return <p className="muted">No matching plays.</p>;
   }
@@ -41,9 +50,17 @@ function StatsTable({ rows, onPlayerClick }: { rows: PlayerStats[]; onPlayerClic
             <tr key={r.playerId} className={i === 0 ? 'leader' : ''}>
               <td className="rank">{i + 1}</td>
               <td className="player">
-                <button type="button" className="player-link" onClick={() => onPlayerClick(r.playerId)}>
-                  {r.playerName}
-                </button>
+                <span className="player-cell">
+                  <Avatar
+                    playerId={r.playerId}
+                    playerName={r.playerName}
+                    imageVersion={imageMap.get(r.playerId) ?? null}
+                    size={24}
+                  />
+                  <button type="button" className="player-link" onClick={() => onPlayerClick(r.playerId)}>
+                    {r.playerName}
+                  </button>
+                </span>
               </td>
               <td>{r.plays}</td>
               <td>{r.wins}</td>
@@ -109,6 +126,12 @@ export default function Leaderboard({ refreshKey }: Props) {
     });
   }
 
+  const playerImageMap = useMemo(() => {
+    const m = new Map<number, string | null>();
+    for (const p of players) m.set(p.id, p.imageVersion);
+    return m;
+  }, [players]);
+
   const overallTitle = useMemo(() => {
     if (selectedIds.size === 0) return 'Overall';
     const selectedNames = players.filter((p) => selectedIds.has(p.id)).map((p) => p.name);
@@ -148,10 +171,16 @@ export default function Leaderboard({ refreshKey }: Props) {
               <button
                 key={p.id}
                 type="button"
-                className={`chip${selectedIds.has(p.id) ? ' selected' : ''}`}
+                className={`chip with-avatar${selectedIds.has(p.id) ? ' selected' : ''}`}
                 onClick={() => togglePlayer(p.id)}
               >
-                {p.name}
+                <Avatar
+                  playerId={p.id}
+                  playerName={p.name}
+                  imageVersion={p.imageVersion}
+                  size={20}
+                />
+                <span>{p.name}</span>
               </button>
             ))}
           </div>
@@ -176,7 +205,7 @@ export default function Leaderboard({ refreshKey }: Props) {
               {overallTitle}
               {suffix}
             </h2>
-            <StatsTable rows={stats.overall} onPlayerClick={openProfile} />
+            <StatsTable rows={stats.overall} onPlayerClick={openProfile} imageMap={playerImageMap} />
           </div>
           {stats.games.map((g) => (
             <div className="card" key={g.gameId}>
@@ -186,7 +215,7 @@ export default function Leaderboard({ refreshKey }: Props) {
                   {g.totalPlays} {g.totalPlays === 1 ? 'play' : 'plays'}
                 </span>
               </div>
-              <StatsTable rows={g.leaderboard} onPlayerClick={openProfile} />
+              <StatsTable rows={g.leaderboard} onPlayerClick={openProfile} imageMap={playerImageMap} />
             </div>
           ))}
         </>

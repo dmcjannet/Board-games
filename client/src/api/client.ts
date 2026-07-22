@@ -60,4 +60,30 @@ export const api = {
       method: 'PUT',
       body: JSON.stringify({ tags }),
     }),
+
+  uploadGameImage: (gameId: number, file: File) => uploadImage(`/api/games/${gameId}/image`, file),
+  deleteGameImage: (gameId: number) =>
+    request<void>(`/api/games/${gameId}/image`, { method: 'DELETE' }),
+
+  uploadPlayerImage: (playerId: number, file: File) =>
+    uploadImage(`/api/players/${playerId}/image`, file),
+  deletePlayerImage: (playerId: number) =>
+    request<void>(`/api/players/${playerId}/image`, { method: 'DELETE' }),
 };
+
+async function uploadImage<T>(url: string, file: File): Promise<T> {
+  const form = new FormData();
+  form.append('image', file);
+  const res = await fetch(url, { method: 'PUT', body: form });
+  if (!res.ok) {
+    let message = `Upload failed (${res.status})`;
+    try {
+      const body = (await res.json()) as { error?: string };
+      if (body?.error) message = body.error;
+    } catch {
+      // no JSON body; keep default
+    }
+    throw new Error(message);
+  }
+  return res.json() as Promise<T>;
+}

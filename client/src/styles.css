@@ -1028,3 +1028,111 @@ button.ghost:hover:not(:disabled) {
 .edit-play-form .field:last-of-type {
   margin-bottom: 0.75rem;
 }
+
+/* Avatars */
+.avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  color: #ffffff;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  vertical-align: middle;
+}
+
+.avatar-fallback {
+  background: var(--surface-2);
+}
+
+/* Game images */
+.game-image-thumb {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.game-image-hero {
+  width: 100%;
+  max-height: 140px;
+  object-fit: cover;
+  border-radius: var(--radius);
+  margin-bottom: 0.75rem;
+}
+
+.image-placeholder {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: var(--surface-2);
+  border: 1px dashed var(--border);
+  color: var(--muted);
+  font-size: 0.6rem;
+  text-align: center;
+  line-height: 1.1;
+  padding: 0 4px;
+}
+
+/* Image upload widget on the Add page */
+.image-upload {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.image-upload-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.image-upload-actions {
+  display: flex;
+  gap: 0.35rem;
+}
+
+/* Player cell inside stats tables (avatar + name) */
+.player-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Play card header: game thumb + title side-by-side */
+.play-header-title {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-width: 0;
+}
+
+.play-header-title h3 {
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Player chips with avatars */
+.chip.with-avatar {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding-left: 0.35rem;
+}
+
+/* Scores list: avatar sits next to the linked name */
+ul.scores .player {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}

@@ -3,6 +3,8 @@ import { api } from '../api/client';
 import type { Play } from '../types';
 import { formatDate } from '../utils/formatDate';
 import { usePlayerProfile } from '../context/PlayerProfileContext';
+import Avatar from './Avatar';
+import GameImage from './GameImage';
 
 interface Props {
   refreshKey: number;
@@ -49,13 +51,21 @@ export default function RecentPlays({ refreshKey }: Props) {
         return (
           <div className="card play-card" key={play.id}>
             <div className="play-header">
-              <h3>{play.game.name}</h3>
+              <div className="play-header-title">
+                <GameImage gameId={play.game.id} imageVersion={play.game.imageVersion} variant="thumb" alt={play.game.name} />
+                <h3>{play.game.name}</h3>
+              </div>
               <span className="date">{formatDate(play.playedOn)}</span>
             </div>
             <ul className="scores">
               {sorted.map((s) => (
                 <li key={s.playerId} className={s.isWinner ? 'winner' : ''}>
                   <span className="player">
+                    <Avatar
+                      playerId={s.playerId}
+                      playerName={s.playerName}
+                      imageVersion={s.playerImageVersion}
+                    />
                     <button
                       type="button"
                       className="player-link"

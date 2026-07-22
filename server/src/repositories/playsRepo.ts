@@ -1,4 +1,5 @@
 import { db } from '../db/connection';
+import { imageVersion } from '../utils/images';
 import type { Play, PlayScore } from '../types';
 
 interface PlayRow {
@@ -24,7 +25,7 @@ export interface CreatePlayInput {
 }
 
 function hydrate(row: PlayRow): Play {
-  const game = db
+  const gameRow = db
     .prepare('SELECT id, name FROM games WHERE id = ?')
     .get(row.game_id) as { id: number; name: string };
 
@@ -41,6 +42,7 @@ function hydrate(row: PlayRow): Play {
   const scores: PlayScore[] = scoreRows.map((s) => ({
     playerId: s.player_id,
     playerName: s.player_name,
+    playerImageVersion: imageVersion('players', s.player_id),
     score: s.score,
     isWinner: !!s.is_winner,
   }));
@@ -50,7 +52,7 @@ function hydrate(row: PlayRow): Play {
     playedOn: row.played_on,
     notes: row.notes,
     createdAt: row.created_at,
-    game,
+    game: { ...gameRow, imageVersion: imageVersion('games', gameRow.id) },
     scores,
   };
 }

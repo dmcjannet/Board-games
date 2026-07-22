@@ -1,8 +1,10 @@
-import { useCallback, useEffect, useState, type KeyboardEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type ChangeEvent, type KeyboardEvent } from 'react';
 import { api } from '../api/client';
 import type { Game, Player } from '../types';
 import QuickAddInline from './QuickAddInline';
 import { useSnackbar } from '../context/SnackbarContext';
+import Avatar from './Avatar';
+import GameImage from './GameImage';
 
 interface Props {
   refreshKey: number;
@@ -88,6 +90,80 @@ function GameTagEditor({
         disabled={busy}
       />
       {error && <span className="error inline">{error}</span>}
+    </div>
+  );
+}
+
+function ImageUpload({
+  hasImage,
+  previewNode,
+  onUpload,
+  onDelete,
+  label,
+}: {
+  hasImage: boolean;
+  previewNode: React.ReactNode;
+  onUpload: (file: File) => Promise<void>;
+  onDelete: () => Promise<void>;
+  label: string;
+}) {
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleChange(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await onUpload(file);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Upload failed');
+    } finally {
+      setBusy(false);
+      if (inputRef.current) inputRef.current.value = '';
+    }
+  }
+
+  async function handleDelete() {
+    setBusy(true);
+    setError(null);
+    try {
+      await onDelete();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Delete failed');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="image-upload">
+      <div className="image-upload-preview">{previewNode}</div>
+      <div className="image-upload-actions">
+        <button
+          type="button"
+          className="ghost small"
+          onClick={() => inputRef.current?.click()}
+          disabled={busy}
+        >
+          {busy ? '…' : hasImage ? 'Replace' : label}
+        </button>
+        {hasImage && (
+          <button type="button" className="danger small" onClick={() => void handleDelete()} disabled={busy}>
+            Remove
+          </button>
+        )}
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          onChange={(e) => void handleChange(e)}
+          hidden
+        />
+      </div>
+      {error && <p className="error inline">{error}</p>}
     </div>
   );
 }
@@ -255,6 +331,27 @@ export default function AddEntities({ refreshKey, onChanged }: Props) {
     showSnackbar('Player deleted');
   }
 
+  async function uploadGameImage(gameId: number, file: File) {
+    await api.uploadGameImage(gameId, file);
+    await load();
+    onChanged();
+  }
+  async function deleteGameImage(gameId: number) {
+    await api.deleteGameImage(gameId);
+    await load();
+    onChanged();
+  }
+  async function uploadPlayerImage(playerId: number, file: File) {
+    await api.uploadPlayerImage(playerId, file);
+    await load();
+    onChanged();
+  }
+  async function deletePlayerImage(playerId: number) {
+    await api.deletePlayerImage(playerId);
+    await load();
+    onChanged();
+  }
+
   if (loading) return <p className="muted">Loading…</p>;
   if (error) return <p className="error">{error}</p>;
 
@@ -269,6 +366,19 @@ export default function AddEntities({ refreshKey, onChanged }: Props) {
             {games.map((g) => (
               <li key={g.id} className="game-row">
                 <RenameRow entity={g} onRename={renameGame} onDelete={deleteGame} />
+                <ImageUpload
+                  hasImage={g.imageVersion != null}
+                  previewNode={
+                    g.imageVersion ? (
+                      <GameImage gameId={g.id} imageVersion={g.imageVersion} variant="thumb" alt={g.name} />
+                    ) : (
+                      <span className="image-placeholder">no image</span>
+                    )
+                  }
+                  onUpload={(file) => uploadGameImage(g.id, file)}
+                  onDelete={() => deleteGameImage(g.id)}
+                  label="Add image"
+                />
                 <GameTagEditor game={g} onUpdate={(nextTags) => updateGameTags(g, nextTags)} />
               </li>
             ))}
@@ -291,6 +401,20 @@ export default function AddEntities({ refreshKey, onChanged }: Props) {
             {players.map((p) => (
               <li key={p.id} className="game-row">
                 <RenameRow entity={p} onRename={renamePlayer} onDelete={deletePlayer} />
+                <ImageUpload
+                  hasImage={p.imageVersion != null}
+                  previewNode={
+                    <Avatar
+                      playerId={p.id}
+                      playerName={p.name}
+                      imageVersion={p.imageVersion}
+                      size={40}
+                    />
+                  }
+                  onUpload={(file) => uploadPlayerImage(p.id, file)}
+                  onDelete={() => deletePlayerImage(p.id)}
+                  label="Add avatar"
+                />
               </li>
             ))}
           </ul>
