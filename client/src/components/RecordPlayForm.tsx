@@ -3,6 +3,7 @@ import { api } from '../api/client';
 import type { Game, Player } from '../types';
 import GameSelect from './GameSelect';
 import PlayerScoreRows, { type ScoreRowState } from './PlayerScoreRows';
+import { fireWinConfetti } from '../utils/confetti';
 
 function today(): string {
   return new Date().toISOString().slice(0, 10);
@@ -132,6 +133,11 @@ export default function RecordPlayForm({ refreshKey, onSaved }: Props) {
           );
           return;
         }
+      }
+      // Celebrate! Any recorded winner triggers confetti — matches the
+      // Auto-recap logic where "a win exists to talk about."
+      if (created.scores.some((s) => s.isWinner)) {
+        fireWinConfetti();
       }
       setRows([newRow(), newRow()]);
       setNotes('');

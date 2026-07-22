@@ -5,6 +5,7 @@ import { formatDate } from '../utils/formatDate';
 import { usePlayerProfile } from '../context/PlayerProfileContext';
 import Avatar from './Avatar';
 import GameImage from './GameImage';
+import PlayRecap from './PlayRecap';
 
 interface Props {
   refreshKey: number;
@@ -65,6 +66,7 @@ export default function RecentPlays({ refreshKey }: Props) {
               </div>
               <span className="date">{formatDate(play.playedOn)}</span>
             </div>
+            <PlayRecap play={play} />
             <ul className="scores">
               {sorted.map((s) => (
                 <li key={s.playerId} className={s.isWinner ? 'winner' : ''}>

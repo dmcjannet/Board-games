@@ -5,6 +5,7 @@ import { formatDate } from '../utils/formatDate';
 import { useSnackbar } from '../context/SnackbarContext';
 import { usePlayerProfile } from '../context/PlayerProfileContext';
 import PlayEditModal from './PlayEditModal';
+import PlayRecap from './PlayRecap';
 
 interface Props {
   refreshKey: number;
@@ -191,6 +192,7 @@ export default function ManagePlays({ refreshKey, onChanged }: Props) {
                         loading="lazy"
                       />
                     )}
+                    <PlayRecap play={play} />
                     <ul className="scores">
                       {sortedScores.map((s) => (
                         <li key={s.playerId} className={s.isWinner ? 'winner' : ''}>

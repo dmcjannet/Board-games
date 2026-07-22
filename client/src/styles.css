@@ -1137,6 +1137,23 @@ ul.scores .player {
   gap: 0.5rem;
 }
 
+/* Auto-generated one-liner recap under the play card header */
+.play-recap {
+  margin: 0 0 0.75rem;
+  padding: 0.5rem 0.7rem;
+  background: rgba(99, 102, 241, 0.06);
+  border-left: 3px solid var(--primary);
+  border-radius: 0 6px 6px 0;
+  font-size: 0.9rem;
+  font-style: italic;
+  color: var(--text);
+  line-height: 1.4;
+}
+
+.play-detail .play-recap {
+  margin-top: 0.5rem;
+}
+
 /* Play photo — hero at the top of a play card / inside expanded detail */
 .play-photo {
   width: 100%;

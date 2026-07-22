@@ -17,6 +17,7 @@ import PlayerCountFilter from './PlayerCountFilter';
 import TagFilter from './TagFilter';
 import { formatDate, formatDateShort } from '../utils/formatDate';
 import { usePlayerProfile } from '../context/PlayerProfileContext';
+import PlayRecap from './PlayRecap';
 
 const PLAYER_COLORS = [
   '#6366f1',
@@ -147,6 +148,7 @@ function PlayDetailList({ plays, onPlayerClick }: { plays: Play[]; onPlayerClick
               </div>
             </div>
             <div className="play-detail">
+              <PlayRecap play={play} />
               <ul className="scores">
                 {scores.map((s) => (
                   <li key={s.playerId} className={s.isWinner ? 'winner' : ''}>
